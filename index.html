@@ -129,10 +129,10 @@ main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
 .sheet-inner{background:#fff;border-radius:20px 20px 0 0;padding:1.5rem 1.25rem 2rem;width:100%;max-width:480px;animation:slidein .25s ease}
 .sheet-title{font-size:1.1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 .sheet-emoji{font-size:1.75rem}
-.qty-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem}
-.qty-btn{width:3rem;height:3rem;border-radius:50%;border:2px solid #e8e8e6;background:#f0f0ec;font-size:1.5rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qty-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;width:100%}
+.qty-btn{width:3rem;height:3rem;min-width:3rem;border-radius:50%;border:2px solid #e8e8e6;background:#f0f0ec;font-size:1.5rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .qty-btn:hover{background:#ddd}
-.qty-val{flex:1;font-size:1.5rem;font-weight:700;text-align:center;padding:.5rem;border:1px solid #d0d0cc;border-radius:10px;background:#f8f8f6;color:#1a1a1a}
+.qty-val{flex:1;min-width:0;font-size:1.5rem;font-weight:700;text-align:center;padding:.5rem;border:1px solid #d0d0cc;border-radius:10px;background:#f8f8f6;color:#1a1a1a;width:0}
 .unit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-bottom:.9rem}
 .unit-btn{padding:.5rem .25rem;border:1px solid #e8e8e6;border-radius:8px;background:#f8f8f6;font-size:.8rem;font-weight:600;cursor:pointer;text-align:center;min-height:2.5rem}
 .unit-btn.active{background:#e6f1fb;border-color:#378add;color:#185fa5}
@@ -764,6 +764,10 @@ function setTab(id){
   if(id==='share')renderShare();
 }
 
+// ── ITEM MAP para edición segura ─────────────────────────────────────
+const ITEM_MAP={};
+function storeItem(item){ITEM_MAP[item.id]=item;return item.id;}
+
 // ── RENDER ────────────────────────────────────────────────────────────
 function renderAll(){
   renderItems();renderProgress();renderMembers();renderSggs();renderCompleteBanner();
@@ -819,6 +823,7 @@ function renderItems(){
 }
 
 function iHTML(item){
+  storeItem(item);
   const who=item.addedBy&&item.addedBy!==S.myName?`<div class="iwho">Añadido por ${item.addedBy}</div>`:'';
   const qty=item.qtyStr?`<div class="iqty">${item.qtyStr}</div>`:'';
   return `<li class="icard${item.done?' done':''}" role="listitem">
@@ -828,10 +833,15 @@ function iHTML(item){
       <span class="ichk" aria-hidden="true">${item.done?'✓':''}</span>
     </button>
     <div class="iactions">
-      <button class="iedit" onclick="openSheet('${item.name.replace(/'/g,"\\'")}',${JSON.stringify(item).replace(/</g,'&lt;')})" aria-label="Editar ${item.name}">✏️</button>
+      <button class="iedit" onclick="editItem('${item.id}')" aria-label="Editar ${item.name}">✏️</button>
       <button class="idel" onclick="deleteItem('${item.id}')" aria-label="Eliminar ${item.name}">🗑️</button>
     </div>
   </li>`;
+}
+
+function editItem(id){
+  const item=ITEM_MAP[id]||S.items.find(i=>i.id===id);
+  if(item)openSheet(item.name,item);
 }
 
 function renderFavs(){
