@@ -67,10 +67,11 @@ main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
 .rbanner{background:#e6f1fb;border:1px solid #b5d4f4;border-radius:12px;padding:.65rem .9rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.6rem}
 .rcode{font-family:monospace;font-size:1.25rem;font-weight:700;letter-spacing:4px;color:#185fa5}
 .btn-cp{background:#378add;color:#fff;border:none;border-radius:8px;padding:.5rem .9rem;font-size:.8rem;font-weight:700;cursor:pointer;margin-left:auto;min-height:2.25rem}
-.mrow{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
-.mchip{display:flex;align-items:center;gap:.3rem;background:#fff;border:1px solid #e8e8e6;border-radius:99px;padding:.3rem .75rem .3rem .3rem;font-size:.75rem;font-weight:500}
-.mav{width:1.5rem;height:1.5rem;border-radius:50%;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#185fa5;flex-shrink:0}
-.mav.you{background:#eaf3de;color:#3b6d11}
+.mrow{display:flex;gap:.35rem;flex-wrap:nowrap;overflow-x:auto;margin-bottom:.5rem;padding-bottom:.1rem}
+.mrow::-webkit-scrollbar{display:none}
+.mchip{display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mav{width:2rem;height:2rem;border-radius:50%;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#185fa5;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.mav.you{background:#eaf3de;color:#3b6d11;border-color:#9fe1cb}
 
 /* Complete banner */
 .cbanner{background:#eaf3de;border:1px solid #9fe1cb;border-radius:14px;padding:1.25rem;margin-bottom:1rem;text-align:center;animation:pop .3s ease}
@@ -242,14 +243,6 @@ main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
     <div id="panels" style="display:none">
 
       <div id="panel-lista" role="tabpanel" aria-labelledby="tab-lista">
-        <div class="rbanner">
-          <span aria-hidden="true">🔗</span>
-          <div>
-            <div style="font-size:.7rem;color:#666;font-weight:600">Lista compartida</div>
-            <div class="rcode" id="bcode">----</div>
-          </div>
-          <button class="btn-cp" onclick="copyCode()">Copiar</button>
-        </div>
         <div class="mrow" id="mrow" aria-live="polite"></div>
         <div id="cbanner" style="display:none" class="cbanner" aria-live="assertive">
           <div class="cbanner-icon" aria-hidden="true">🎉</div>
@@ -665,7 +658,9 @@ function renderProgress(){
 }
 function renderMembers(){
   document.getElementById('mrow').innerHTML=Object.values(S.members).map(m=>
-    `<div class="mchip"><div class="mav${m.name===S.myName?' you':''}">${m.name[0].toUpperCase()}</div><span>${m.name}${m.name===S.myName?' (tú)':''}</span></div>`).join('');
+    `<div class="mchip" title="${m.name}${m.name===S.myName?' (tú)':''}">
+      <div class="mav${m.name===S.myName?' you':''}" aria-label="${m.name}${m.name===S.myName?' (tú)':''}">${m.name[0].toUpperCase()}</div>
+    </div>`).join('');
 }
 function renderItems(){
   const c=document.getElementById('items-c');
@@ -728,10 +723,19 @@ function renderHist(){
       <button class="btn-reutilizar" onclick="reutilizarLista(${idx})">🔄 Cargar esta lista</button>
     </div>`).join('');
 }
+async function removeMember(name){
+  if(!confirm('¿Quitar a "'+name+'" de la sala?'))return;
+  delete S.members[name];
+  await pushState();
+  toast('"'+name+'" eliminado de la sala');
+}
 function renderShare(){
   document.getElementById('mfull').innerHTML=Object.values(S.members).map(m=>`
-    <div class="mfrow"><div class="mfav${m.name===S.myName?' you':''}">${m.name[0].toUpperCase()}</div>
-    <div><div style="font-size:.95rem;font-weight:700">${m.name}</div>${m.name===S.myName?'<div style="font-size:.75rem;color:#aaa">tú</div>':''}</div></div>`).join('');
+    <div class="mfrow">
+      <div class="mfav${m.name===S.myName?' you':''}">${m.name[0].toUpperCase()}</div>
+      <div style="flex:1"><div style="font-size:.95rem;font-weight:700">${m.name}</div>${m.name===S.myName?'<div style="font-size:.75rem;color:#aaa">tú</div>':''}</div>
+      ${m.name!==S.myName?`<button onclick="removeMember('${m.name.replace(/'/g,"\'")}')" style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#e24b4a;min-height:2rem">Quitar</button>`:''}
+    </div>`).join('');
   document.getElementById('bigcode').textContent=S.roomCode||'----';
 }
 function toggleCat(id){S.col[id]=!S.col[id];renderItems();}
