@@ -194,7 +194,10 @@ main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
   <header id="hdr" style="display:none">
     <div class="hdr-top">
       <span aria-hidden="true" style="font-size:1.6rem">🛒</span>
-      <h1 id="hdr-title">Mi lista</h1>
+      <h1 id="hdr-title" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">Mi lista</h1>
+      <button id="list-switcher" onclick="toggleListsPanel()" aria-label="Cambiar de lista" style="display:none;align-items:center;gap:.3rem;background:#f0f0ec;border:1px solid #ddd;border-radius:8px;padding:.3rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#555;min-height:36px;white-space:nowrap;flex-shrink:0">
+        <span id="switcher-label">Lista</span> ▾
+      </button>
       <div class="sync-badge" aria-live="polite" aria-label="Estado de sincronización">
         <div class="sdot" id="sdot"></div>
         <span id="slbl">Conectando…</span>
@@ -241,6 +244,16 @@ main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
 
     <!-- PANELS (app activa) -->
     <div id="panels" style="display:none">
+
+      <!-- Panel selector de listas -->
+      <div id="lists-panel" style="display:none;background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:1rem;margin-bottom:.75rem">
+        <div style="font-size:.8rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.6rem">Mis listas</div>
+        <div id="lists-container"></div>
+        <button onclick="createNewList()" style="width:100%;padding:.65rem;border:1px dashed #d0d0cc;border-radius:10px;background:none;color:#666;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:.5rem;min-height:2.75rem">＋ Nueva lista</button>
+        <div style="margin-top:.5rem">
+          <button onclick="goToSetup()" style="width:100%;padding:.65rem;border:1px solid #d0d0cc;border-radius:10px;background:#f0f0ec;color:#555;font-size:.9rem;font-weight:600;cursor:pointer;min-height:2.75rem">Unirse a lista con código</button>
+        </div>
+      </div>
 
       <div id="panel-lista" role="tabpanel" aria-labelledby="tab-lista">
         <div class="mrow" id="mrow" aria-live="polite"></div>
@@ -458,7 +471,7 @@ async function enterExistingList(code){
       else{S.items=[];S.members={};S.history=[];}
       S.members[name]={name,joined:Date.now()};
       const listName=myLists.find(l=>l.code===code)?.name||'Lista';
-      await pushState();listenRoom();enterApp(listName);
+      await pushState();listenRoom();updateSwitcher();enterApp(listName);
     }catch(e){toast('Error al conectar.');setSS('err');}
   });
 }
@@ -520,6 +533,7 @@ function enterApp(listName){
   document.getElementById('hdr').style.display='';
   document.getElementById('addp').style.display='';
   document.getElementById('hdr-title').textContent=listName||'Mi lista';
+  updateSwitcher();
   renderAll();toast('✅ Hola, '+S.myName+'!');
 }
 
@@ -639,9 +653,101 @@ function setTab(id){
   });
   document.getElementById('addp').style.display=id==='lista'?'':'none';
   document.getElementById('pwrap').style.display=id==='lista'?'':'none';
+  document.getElementById('lists-panel').style.display='none';
   if(id==='favs')renderFavs();
   if(id==='hist')renderHist();
   if(id==='share')renderShare();
+}
+
+// ── GESTIÓN DE LISTAS ────────────────────────────────────────────────
+function toggleListsPanel(){
+  const p=document.getElementById('lists-panel');
+  const open=p.style.display==='none'||!p.style.display;
+  p.style.display=open?'':'none';
+  if(open)renderListsPanel();
+}
+
+function renderListsPanel(){
+  document.getElementById('lists-container').innerHTML=myLists.map(l=>`
+    <button onclick="switchToList('${l.code}')" style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;background:${l.code===S.roomCode?'#e6f1fb':'#f8f8f6'};border:1px solid ${l.code===S.roomCode?'#b5d4f4':'#e8e8e6'};border-radius:12px;cursor:pointer;text-align:left;width:100%;min-height:3.5rem;margin-bottom:.4rem" aria-label="Entrar en ${l.name}">
+      <span style="font-size:1.4rem">🛒</span>
+      <div style="flex:1">
+        <div style="font-size:1rem;font-weight:700;color:#1a1a1a">${l.name}</div>
+        <div style="font-size:.75rem;color:#aaa;font-family:monospace;letter-spacing:2px">${l.code}</div>
+      </div>
+      <span style="font-size:1rem;color:#aaa">${l.code===S.roomCode?'✓':'›'}</span>
+    </button>`).join('');
+}
+
+async function switchToList(code){
+  if(code===S.roomCode){toggleListsPanel();return;}
+  if(fbUnsub)fbUnsub();
+  delete S.members[S.myName];await pushState();
+  setSS('syncing');
+  try{
+    const snap=await window._fbGet('rooms/'+code);
+    const d=snap.exists()?snap.val():{items:[],members:{},history:[]};
+    S.roomCode=code;S.items=d.items||[];S.members=d.members||{};S.history=d.history||[];
+    S.members[S.myName]={name:S.myName,joined:Date.now()};
+    await pushState();listenRoom();
+    const listName=myLists.find(l=>l.code===code)?.name||'Lista';
+    document.getElementById('hdr-title').textContent=listName;
+    document.getElementById('switcher-label').textContent=listName;
+    saveSession();renderAll();toggleListsPanel();
+    toast('✅ '+listName);
+  }catch(e){toast('Error al cambiar de lista.');setSS('err');}
+}
+
+async function createNewList(){
+  const name=prompt('Nombre de la nueva lista (ej. Mercadona, Farmacia…)');
+  if(!name)return;
+  if(fbUnsub)fbUnsub();
+  delete S.members[S.myName];await pushState();
+  const code=genCode();
+  S.roomCode=code;S.items=[];S.history=[];S.members={};
+  S.members[S.myName]={name:S.myName,joined:Date.now()};
+  myLists.push({code,name,created:Date.now()});
+  await pushState();listenRoom();
+  document.getElementById('hdr-title').textContent=name;
+  document.getElementById('switcher-label').textContent=name;
+  const sw=document.getElementById('list-switcher');sw.style.display='flex';
+  saveSession();renderAll();
+  document.getElementById('lists-panel').style.display='none';
+  toast('✅ Lista "'+name+'" creada. Código: '+code);
+}
+
+function goToSetup(){
+  document.getElementById('lists-panel').style.display='none';
+  leaveRoom();
+}
+
+function updateSwitcher(){
+  const sw=document.getElementById('list-switcher');
+  if(myLists.length>1){
+    sw.style.display='flex';
+    const name=myLists.find(l=>l.code===S.roomCode)?.name||'Lista';
+    document.getElementById('switcher-label').textContent=name;
+  } else {
+    sw.style.display='none';
+  }
+}
+
+// ── EDITAR NOMBRE DE MIEMBRO ─────────────────────────────────────────
+async function renameMember(oldName){
+  const newName=prompt('Nuevo nombre para "'+oldName+'":',oldName);
+  if(!newName||newName===oldName)return;
+  const member=S.members[oldName];
+  if(!member)return;
+  delete S.members[oldName];
+  S.members[newName]={...member,name:newName};
+  // Si es el propio usuario actualizar también S.myName
+  if(oldName===S.myName){
+    S.myName=newName;
+    localStorage.setItem('lc_name',newName);
+  }
+  S.items=S.items.map(i=>({...i,addedBy:i.addedBy===oldName?newName:i.addedBy}));
+  await pushState();
+  toast('✅ Nombre actualizado a "'+newName+'"');
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────
@@ -727,14 +833,21 @@ async function removeMember(name){
   if(!confirm('¿Quitar a "'+name+'" de la sala?'))return;
   delete S.members[name];
   await pushState();
+  renderShare();
   toast('"'+name+'" eliminado de la sala');
 }
 function renderShare(){
   document.getElementById('mfull').innerHTML=Object.values(S.members).map(m=>`
     <div class="mfrow">
       <div class="mfav${m.name===S.myName?' you':''}">${m.name[0].toUpperCase()}</div>
-      <div style="flex:1"><div style="font-size:.95rem;font-weight:700">${m.name}</div>${m.name===S.myName?'<div style="font-size:.75rem;color:#aaa">tú</div>':''}</div>
-      ${m.name!==S.myName?`<button onclick="removeMember('${m.name.replace(/'/g,"\'")}')" style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#e24b4a;min-height:2rem">Quitar</button>`:''}
+      <div style="flex:1">
+        <div style="font-size:.95rem;font-weight:700">${m.name}</div>
+        ${m.name===S.myName?'<div style="font-size:.75rem;color:#aaa">tú</div>':''}
+      </div>
+      <div style="display:flex;gap:.4rem">
+        <button onclick="renameMember('${m.name.replace(/'/g,"\'")}')" style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#185fa5;min-height:2rem">✏️</button>
+        ${m.name!==S.myName?`<button onclick="removeMember('${m.name.replace(/'/g,"\'")}')" style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#e24b4a;min-height:2rem">✕</button>`:''}
+      </div>
     </div>`).join('');
   document.getElementById('bigcode').textContent=S.roomCode||'----';
 }
