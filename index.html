@@ -282,18 +282,21 @@ main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
           <button class="btn-p" onclick="shareCode()">📲 Compartir por WhatsApp</button>
           <div style="margin-top:.5rem"><button class="btn-s" onclick="copyCode()">Copiar código</button></div>
         </div>
-        <div class="shcard">
-          <div class="shttl">Unirse a otra lista</div>
-          <input class="cinp" id="jinp" type="text" maxlength="4" placeholder="XXXX" aria-label="Código de sala" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
-          <div style="margin-top:.4rem"><button class="btn-s" onclick="joinFromShare()">Unirse</button></div>
-        </div>
+
         <div class="shcard">
           <div class="shttl">Miembros</div>
           <div id="mfull" aria-live="polite"></div>
         </div>
         <div class="shcard">
-          <button class="btn-s" onclick="leaveRoom()">← Volver al inicio</button>
+          <div class="shttl">Mis listas</div>
+          <div id="share-lists-container"></div>
+          <button onclick="createNewList()" style="width:100%;padding:.65rem;border:1px dashed #d0d0cc;border-radius:10px;background:none;color:#378add;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:.5rem;min-height:2.75rem">＋ Nueva lista</button>
+          <div style="margin-top:.5rem">
+            <input class="cinp" id="join-code-share" type="text" maxlength="4" placeholder="XXXX" aria-label="Código de sala" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" style="margin-bottom:.4rem">
+            <button class="btn-s" onclick="joinFromShare()">Unirse a lista con código</button>
+          </div>
         </div>
+
       </div>
     </div>
   </main>
@@ -505,7 +508,7 @@ async function joinRoom(){
 }
 
 async function joinFromShare(){
-  const code=document.getElementById('jinp').value.trim().toUpperCase();
+  const code=(document.getElementById('join-code-share')?.value||document.getElementById('jinp')?.value||'').trim().toUpperCase();
   if(code.length<4){toast('Introduce un código de 4 caracteres');return;}
   setSS('syncing');
   try{
@@ -693,7 +696,8 @@ async function switchToList(code){
     const listName=myLists.find(l=>l.code===code)?.name||'Lista';
     document.getElementById('hdr-title').textContent=listName;
     document.getElementById('switcher-label').textContent=listName;
-    saveSession();renderAll();toggleListsPanel();
+    saveSession();renderAll();
+    document.getElementById('lists-panel').style.display='none';
     toast('✅ '+listName);
   }catch(e){toast('Error al cambiar de lista.');setSS('err');}
 }
@@ -723,7 +727,7 @@ function goToSetup(){
 
 function updateSwitcher(){
   const sw=document.getElementById('list-switcher');
-  if(myLists.length>1){
+  if(myLists.length>=1){
     sw.style.display='flex';
     const name=myLists.find(l=>l.code===S.roomCode)?.name||'Lista';
     document.getElementById('switcher-label').textContent=name;
@@ -754,6 +758,7 @@ async function renameMember(oldName){
 function renderAll(){renderItems();renderProgress();renderMembers();renderCompleteBanner();
   document.getElementById('bcode').textContent=S.roomCode||'----';
   document.getElementById('bigcode').textContent=S.roomCode||'----';
+  renderShareLists();
 }
 function renderCompleteBanner(){const has=S.items.length>0,all=has&&S.items.every(i=>i.done);document.getElementById('cbanner').style.display=all?'':'none';}
 function renderProgress(){
@@ -836,6 +841,64 @@ async function removeMember(name){
   renderShare();
   toast('"'+name+'" eliminado de la sala');
 }
+async function renameList(code){
+  const list=myLists.find(l=>l.code===code);
+  if(!list)return;
+  const newName=prompt('Nuevo nombre para esta lista:',list.name);
+  if(!newName||newName===list.name)return;
+  list.name=newName;
+  saveSession();
+  if(code===S.roomCode){
+    document.getElementById('hdr-title').textContent=newName;
+    document.getElementById('switcher-label').textContent=newName;
+  }
+  renderListsPanel();
+  renderShareLists();
+  toast('✅ Lista renombrada a "'+newName+'"');
+}
+
+async function deleteList(code){
+  const list=myLists.find(l=>l.code===code);
+  if(!list)return;
+  if(!confirm('¿Eliminar la lista "'+list.name+'"? Se borrará de tus listas guardadas.'))return;
+  myLists=myLists.filter(l=>l.code!==code);
+  saveSession();
+  if(code===S.roomCode){
+    // Switch to another list or go to setup
+    if(myLists.length>0){
+      await switchToList(myLists[0].code);
+    } else {
+      if(fbUnsub)fbUnsub();
+      S.roomCode=null;S.items=[];S.members={};S.history=[];
+      ['panels','hdr','addp'].forEach(id=>document.getElementById(id).style.display='none');
+      document.getElementById('setup').style.display='';
+      renderSetup();
+    }
+  } else {
+    renderShareLists();
+    renderListsPanel();
+  }
+  toast('🗑️ Lista "'+list.name+'" eliminada');
+}
+
+function renderShareLists(){
+  const c=document.getElementById('share-lists-container');
+  if(!c)return;
+  c.innerHTML=myLists.map(l=>`
+    <div style="display:flex;align-items:center;gap:.5rem;padding:.65rem .5rem;border-bottom:1px solid #f0f0ec">
+      <span style="font-size:1.2rem">🛒</span>
+      <div style="flex:1">
+        <div style="font-size:.95rem;font-weight:700;color:${l.code===S.roomCode?'#185fa5':'#1a1a1a'}">${l.name}${l.code===S.roomCode?' ✓':''}</div>
+        <div style="font-size:.7rem;color:#aaa;font-family:monospace;letter-spacing:2px">${l.code}</div>
+      </div>
+      <div style="display:flex;gap:.3rem">
+        <button onclick="renameList('${l.code}')" style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#185fa5;min-height:2rem" aria-label="Renombrar ${l.name}">✏️</button>
+        <button onclick="switchToList('${l.code}')" style="background:#eaf3de;border:1px solid #9fe1cb;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#0f6e56;min-height:2rem" aria-label="Entrar en ${l.name}">→</button>
+        <button onclick="deleteList('${l.code}')" style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#e24b4a;min-height:2rem" aria-label="Eliminar ${l.name}">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
 function renderShare(){
   document.getElementById('mfull').innerHTML=Object.values(S.members).map(m=>`
     <div class="mfrow">
