@@ -2,944 +2,578 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="description" content="Lista de compra familiar compartida en tiempo real">
 <title>Lista de la compra</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html{font-size:16px}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh;font-size:1.1rem;-webkit-tap-highlight-color:transparent}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
-:focus-visible{outline:3px solid #378add;outline-offset:3px;border-radius:4px}
-#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-
-header{background:#fff;border-bottom:1px solid #e8e8e6;padding:.9rem 1.1rem;position:sticky;top:0;z-index:50}
-.hdr-top{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem}
-h1{font-size:1.4rem;font-weight:700;color:#1a1a1a}
-.sync-badge{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:.75rem;color:#888;padding:.25rem .6rem;background:#f0f0ec;border-radius:99px;border:1px solid #e0e0de}
-.sdot{width:8px;height:8px;border-radius:50%;background:#ccc;transition:background .3s;flex-shrink:0}
-.sdot.ok{background:#1d9e75}.sdot.syncing{background:#ef9f27;animation:blink .7s infinite}.sdot.err{background:#e24b4a}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes pop{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
-@keyframes slidein{0%{transform:translateY(100%)}100%{transform:translateY(0)}}
-
-nav[role=tablist]{display:flex;gap:3px;background:#f0f0ec;border-radius:10px;padding:3px}
-button[role=tab]{flex:1;padding:.55rem .25rem;border:none;background:transparent;border-radius:8px;font-size:.8rem;font-weight:600;color:#666;cursor:pointer;min-height:2.75rem;transition:all .15s}
-button[role=tab][aria-selected=true]{background:#fff;color:#1a1a1a;border:1px solid #ddd;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-
-.prog-wrap{margin-top:.6rem}
-.prog-lbl{font-size:.8rem;color:#666;margin-bottom:.25rem}
-.prog-bar{height:9px;background:#e8e8e6;border-radius:99px;overflow:hidden}
-.prog-fill{height:100%;background:#1d9e75;border-radius:99px;transition:width .4s}
-.prog-fill.complete{background:#378add}
-
-main{flex:1;padding:.9rem;overflow-y:auto;padding-bottom:1.5rem}
-
-/* ── SETUP / SELECTOR DE LISTAS ── */
-.setup{display:flex;flex-direction:column;align-items:center;min-height:100vh;gap:.9rem;padding:1.2rem;padding-top:2rem}
-.setup-icon{font-size:4rem;margin-bottom:.25rem}
-.setup-title{font-size:1.3rem;font-weight:700}
-.setup-sub{font-size:.95rem;color:#666;max-width:300px;line-height:1.5;text-align:center}
-.scard{background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:1.25rem;width:100%;max-width:400px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-.scard-lbl{font-size:.8rem;font-weight:700;color:#666;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.5px}
-.btn-p{background:#378add;color:#fff;border:none;border-radius:10px;padding:.85rem 1.1rem;font-size:1rem;font-weight:700;cursor:pointer;width:100%;min-height:3.25rem;transition:background .15s}
-.btn-p:hover{background:#2d73c4}
-.btn-s{background:#f0f0ec;color:#1a1a1a;border:1px solid #d0d0cc;border-radius:10px;padding:.85rem 1.1rem;font-size:1rem;font-weight:700;cursor:pointer;width:100%;min-height:3.25rem;transition:background .15s}
-.btn-s:hover{background:#e4e4e0}
-.btn-danger{background:#fff5f5;color:#e24b4a;border:1px solid #ffd0d0;border-radius:10px;padding:.85rem 1.1rem;font-size:1rem;font-weight:700;cursor:pointer;width:100%;min-height:3.25rem}
-.or{font-size:.8rem;color:#aaa;margin:.4rem 0;text-align:center}
-.ninp,.cinp{font-size:1.05rem;padding:.8rem 1rem;border:1px solid #d0d0cc;border-radius:10px;background:#f8f8f6;color:#1a1a1a;width:100%;min-height:3.25rem;margin-bottom:.6rem;transition:border-color .15s}
-.ninp:focus,.cinp:focus{outline:none;border-color:#378add;background:#fff}
-.cinp{font-size:1.6rem;font-weight:700;letter-spacing:8px;text-transform:uppercase;text-align:center;font-family:monospace}
-
-/* Listas guardadas */
-.saved-lists{display:flex;flex-direction:column;gap:.5rem;margin-bottom:.5rem}
-.list-item-btn{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;background:#f8f8f6;border:1px solid #e8e8e6;border-radius:12px;cursor:pointer;text-align:left;width:100%;min-height:3.5rem;transition:background .15s}
-.list-item-btn:hover{background:#e6f1fb;border-color:#b5d4f4}
-.list-item-icon{font-size:1.5rem;flex-shrink:0}
-.list-item-info{flex:1}
-.list-item-name{font-size:1rem;font-weight:700;color:#1a1a1a}
-.list-item-code{font-size:.75rem;color:#aaa;font-family:monospace;letter-spacing:2px}
-.list-item-arrow{font-size:1rem;color:#aaa}
-
-/* Room banner */
-.rbanner{background:#e6f1fb;border:1px solid #b5d4f4;border-radius:12px;padding:.65rem .9rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.6rem}
-.rcode{font-family:monospace;font-size:1.25rem;font-weight:700;letter-spacing:4px;color:#185fa5}
-.btn-cp{background:#378add;color:#fff;border:none;border-radius:8px;padding:.5rem .9rem;font-size:.8rem;font-weight:700;cursor:pointer;margin-left:auto;min-height:2.25rem}
-.mrow{display:flex;gap:.35rem;flex-wrap:nowrap;overflow-x:auto;margin-bottom:.5rem;padding-bottom:.1rem}
-.mrow::-webkit-scrollbar{display:none}
-.mchip{display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.mav{width:2rem;height:2rem;border-radius:50%;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#185fa5;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.mav.you{background:#eaf3de;color:#3b6d11;border-color:#9fe1cb}
-
-/* Complete banner */
-.cbanner{background:#eaf3de;border:1px solid #9fe1cb;border-radius:14px;padding:1.25rem;margin-bottom:1rem;text-align:center;animation:pop .3s ease}
-.cbanner-icon{font-size:3rem;margin-bottom:.5rem}
-.cbanner-title{font-size:1.25rem;font-weight:700;color:#0f6e56;margin-bottom:.25rem}
-.cbanner-sub{font-size:.85rem;color:#1d9e75;margin-bottom:.9rem}
-.btn-finish{background:#1d9e75;color:#fff;border:none;border-radius:12px;padding:1rem 1.25rem;font-size:1.1rem;font-weight:700;cursor:pointer;width:100%;min-height:3.5rem}
-
-/* Categories */
-.cat-sec{margin-bottom:.9rem}
-.cat-hdr{display:flex;align-items:center;gap:.5rem;cursor:pointer;border:none;background:none;width:100%;text-align:left;padding:.5rem .25rem;min-height:3rem;border-radius:8px}
-.cat-hdr:hover{background:rgba(0,0,0,.03)}
-.cat-ttl{font-size:.95rem;font-weight:700;color:#555}
-.cat-cnt{font-size:.75rem;color:#999;background:#f0f0ec;border-radius:99px;padding:2px .55rem;font-weight:600}
-.cat-chev{font-size:.7rem;color:#bbb;margin-left:auto;transition:transform .2s}
-.cat-chev.open{transform:rotate(180deg)}
-.ilist{display:flex;flex-direction:column;gap:.5rem}
-.icard{background:#fff;border:1px solid #e8e8e6;border-radius:14px;display:flex;align-items:stretch;overflow:hidden}
-.icard.done{opacity:.5;border-color:#9fe1cb}
-.imain{flex:1;display:flex;align-items:center;gap:.75rem;padding:.85rem .95rem;background:none;border:none;cursor:pointer;text-align:left;min-height:4.1rem}
-.iemoji{font-size:2.2rem;min-width:2.75rem;text-align:center;line-height:1}
-.iinfo{flex:1}
-.iname{font-size:1.2rem;font-weight:700;color:#1a1a1a;line-height:1.2}
-.iqty{font-size:.8rem;color:#378add;font-weight:600;margin-top:.15rem}
-.iwho{font-size:.7rem;color:#bbb;margin-top:.1rem}
-.icard.done .iname{text-decoration:line-through;color:#aaa}
-.ichk{width:2rem;height:2rem;border-radius:50%;border:2px solid #d0d0cc;display:flex;align-items:center;justify-content:center;font-size:1rem;color:transparent;transition:all .2s;min-width:2rem;flex-shrink:0}
-.icard.done .ichk{background:#1d9e75;border-color:#1d9e75;color:#fff}
-.iactions{display:flex;flex-direction:column}
-.iedit{background:#f0f0ec;border:none;border-left:1px solid #e8e8e6;padding:0 .75rem;cursor:pointer;font-size:1.1rem;flex:1;min-width:3.25rem;border-bottom:1px solid #e8e8e6}
-.iedit:hover{background:#e6f1fb}
-.idel{background:#fff5f5;border:none;border-left:1px solid #ffd0d0;padding:0 .75rem;cursor:pointer;font-size:1.1rem;flex:1;min-width:3.25rem;color:#e24b4a}
-.idel:hover{background:#e24b4a;color:#fff}
-
-/* Add panel — SIN accesos rápidos */
-.addp{background:#fff;border-top:1px solid #e8e8e6;padding:.85rem 1.1rem 1.25rem;position:sticky;bottom:0}
-.addrow{display:flex;gap:.5rem;margin-bottom:.5rem}
-.addinp{flex:1;font-size:1.05rem;padding:.8rem 1rem;border:1px solid #d0d0cc;border-radius:10px;background:#f8f8f6;color:#1a1a1a;min-height:3.25rem}
-.addinp:focus{outline:none;border-color:#378add;background:#fff}
-.btnadd{background:#378add;color:#fff;border:none;border-radius:10px;padding:0 1rem;font-size:1.5rem;cursor:pointer;min-width:3.25rem;min-height:3.25rem;font-weight:700;flex-shrink:0}
-.btnvox{width:100%;background:#f0f0ec;border:1px solid #d0d0cc;border-radius:10px;padding:.75rem;font-size:.95rem;font-weight:700;color:#1a1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem}
-.btnvox.on{background:#fff0f0;border-color:#ffd0d0;color:#e24b4a}
-.vdot{width:10px;height:10px;border-radius:50%;background:#e24b4a;animation:blink .7s infinite;display:none;flex-shrink:0}
-
-/* Sheet cantidad/unidad/categoría */
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:200;backdrop-filter:blur(2px)}
-.sheet-inner{background:#fff;border-radius:20px 20px 0 0;padding:1.5rem 1.25rem 2rem;width:100%;max-width:480px;animation:slidein .25s ease;max-height:90vh;overflow-y:auto}
-.sheet-title{font-size:1.1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
-.sheet-emoji{font-size:1.75rem}
-.sheet-label{font-size:.8rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem;margin-top:.75rem}
-.qty-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;width:100%}
-.qty-btn{width:3rem;height:3rem;min-width:3rem;border-radius:50%;border:2px solid #e8e8e6;background:#f0f0ec;font-size:1.5rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.qty-btn:hover{background:#ddd}
-.qty-val{flex:1;min-width:0;font-size:1.5rem;font-weight:700;text-align:center;padding:.5rem;border:1px solid #d0d0cc;border-radius:10px;background:#f8f8f6;color:#1a1a1a;width:0}
-.unit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-bottom:.25rem}
-.unit-btn{padding:.5rem .25rem;border:1px solid #e8e8e6;border-radius:8px;background:#f8f8f6;font-size:.8rem;font-weight:600;cursor:pointer;text-align:center;min-height:2.5rem}
-.unit-btn.active{background:#e6f1fb;border-color:#378add;color:#185fa5}
-.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.9rem}
-.cat-btn{padding:.5rem .25rem;border:1px solid #e8e8e6;border-radius:8px;background:#f8f8f6;font-size:.75rem;font-weight:600;cursor:pointer;text-align:center;min-height:2.75rem;display:flex;flex-direction:column;align-items:center;gap:.15rem}
-.cat-btn.active{background:#e6f1fb;border-color:#378add;color:#185fa5}
-.sheet-btns{display:flex;gap:.6rem;margin-top:.75rem}
-.sheet-btns button{flex:1;min-height:3.25rem;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;border:none}
-.sbcancel{background:#f0f0ec;color:#1a1a1a}
-.sbconfirm{background:#378add;color:#fff}
-
-/* Favs */
-.fav-search{width:100%;font-size:1rem;padding:.75rem 1rem;border:1px solid #d0d0cc;border-radius:10px;background:#f8f8f6;color:#1a1a1a;margin-bottom:.75rem;min-height:3rem}
-.fav-search:focus{outline:none;border-color:#378add;background:#fff}
-.fav-cat-title{font-size:.8rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin:.75rem 0 .4rem;display:flex;align-items:center;gap:.4rem}
-.favgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:.25rem}
-.favc{background:#fff;border:1px solid #e8e8e6;border-radius:12px;display:flex;align-items:center;gap:.6rem;padding:.75rem .9rem;cursor:pointer;min-height:4rem;border-left:4px solid transparent;transition:all .15s}
-.favc.on{border-left-color:#1d9e75;background:#eaf3de}
-.favemoji{font-size:1.75rem;flex-shrink:0}
-.favname{font-size:.9rem;font-weight:600;color:#1a1a1a;flex:1;line-height:1.2}
-.favchk{font-size:1rem;color:#1d9e75;opacity:0;transition:opacity .15s;flex-shrink:0}
-.favc.on .favchk{opacity:1}
-
-/* Historial */
-.hcard{background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:1rem;margin-bottom:.65rem}
-.hcard-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.65rem;gap:.65rem}
-.hcard-date{font-size:.9rem;font-weight:700;color:#1a1a1a;text-transform:capitalize}
-.hcard-meta{font-size:.75rem;color:#aaa;margin-top:.15rem}
-.hbadge{background:#eaf3de;color:#0f6e56;border-radius:99px;padding:.25rem .65rem;font-size:.75rem;font-weight:700;white-space:nowrap}
-.hitems{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem}
-.hitem{display:flex;align-items:center;gap:.25rem;background:#f8f8f6;border:1px solid #e8e8e6;border-radius:8px;padding:.25rem .5rem;font-size:.75rem;font-weight:500}
-.btn-reutilizar{width:100%;margin-top:.65rem;padding:.65rem;background:#e6f1fb;border:1px solid #b5d4f4;border-radius:10px;color:#185fa5;font-size:.9rem;font-weight:700;cursor:pointer;min-height:2.75rem}
-
-/* Share */
-.shcard{background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:1.1rem;margin-bottom:.75rem}
-.shttl{font-size:.8rem;font-weight:700;color:#666;margin-bottom:.65rem;text-transform:uppercase;letter-spacing:.5px}
-.bigcode{font-size:2.75rem;font-weight:700;letter-spacing:10px;color:#185fa5;font-family:monospace;text-align:center;padding:.9rem 0}
-.mfrow{display:flex;align-items:center;gap:.65rem;padding:.65rem 0;border-bottom:1px solid #f0f0ec}
-.mfrow:last-child{border-bottom:none}
-.mfav{width:2.5rem;height:2.5rem;border-radius:50%;background:#e6f1fb;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#185fa5;flex-shrink:0}
-.mfav.you{background:#eaf3de;color:#3b6d11}
-
-.empty{text-align:center;padding:3rem 1rem;color:#aaa}
-.empty-icon{font-size:3.25rem;margin-bottom:.65rem}
-.empty-t{font-size:1.1rem;font-weight:700;color:#888;margin-bottom:.3rem}
-.empty-s{font-size:.875rem}
-
-/* Modal */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:1.25rem;backdrop-filter:blur(2px)}
-.modal{background:#fff;border-radius:18px;padding:1.75rem 1.5rem;max-width:320px;width:100%;text-align:center;animation:pop .2s ease}
-.modal-icon{font-size:3.25rem;margin-bottom:.65rem}
-.modal-title{font-size:1.25rem;font-weight:700;margin-bottom:.4rem}
-.modal-sub{font-size:.9rem;color:#666;margin-bottom:1.4rem;line-height:1.5}
-.modal-btns{display:flex;gap:.65rem}
-.modal-btns button{flex:1;min-height:3.25rem;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
-.mcancel{background:#f0f0ec;color:#1a1a1a;border:1px solid #d0d0cc}
-.mconfirm{background:#1d9e75;color:#fff;border:none}
-
-#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:.75rem 1.25rem;border-radius:12px;font-size:.875rem;font-weight:600;z-index:300;transition:transform .25s ease;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2)}
-#toast.show{transform:translateX(-50%) translateY(0)}
+:root{
+  --bg:#f5f5f3;--card:#fff;--text:#1a1a1a;--muted:#626262;--line:#deded9;
+  --blue:#1769aa;--blue-soft:#e7f2fc;--green:#0b7558;--green-soft:#e7f6ef;
+  --red:#b42318;--red-soft:#fff0ef;--orange:#9a5b00;--orange-soft:#fff4df;
+  --radius:14px;--tap:3rem;
+}
+*{box-sizing:border-box}
+html{font-size:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:var(--bg);color:var(--text);font-size:1rem;line-height:1.45;min-height:100vh;
+  overflow-wrap:anywhere;-webkit-tap-highlight-color:transparent
+}
+button,input,select{font:inherit}
+button{touch-action:manipulation}
+button:disabled{opacity:.55;cursor:not-allowed}
+:focus-visible{outline:.2rem solid #005fcc;outline-offset:.18rem}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+[hidden]{display:none!important}
+#app{width:min(100%,42rem);margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:.8rem clamp(.7rem,3vw,1rem);position:sticky;top:0;z-index:50}
+.hdr-top{display:flex;align-items:center;gap:.55rem;min-width:0;flex-wrap:wrap}
+.hdr-title{font-size:clamp(1.15rem,4vw,1.45rem);margin:0;min-width:0;flex:1 1 9rem}
+.icon{font-size:1.6rem}
+.sync-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--muted);padding:.28rem .55rem;background:#f1f1ee;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+.sdot{width:.55rem;height:.55rem;border-radius:50%;background:#999;flex:none}
+.sdot.ok{background:var(--green)}.sdot.syncing{background:#d98700}.sdot.err{background:var(--red)}
+.switcher{border:1px solid var(--line);background:#f3f3f0;color:var(--text);border-radius:.6rem;padding:.45rem .65rem;min-height:2.75rem;font-weight:700;max-width:12rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.2rem;background:#efefeb;border-radius:.7rem;padding:.2rem;margin-top:.65rem}
+.tabs button{border:0;background:transparent;color:#535353;border-radius:.55rem;padding:.55rem .2rem;min-height:var(--tap);font-size:.82rem;font-weight:700}
+.tabs button[aria-selected="true"]{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.prog-wrap{margin-top:.6rem}.prog-lbl{font-size:.82rem;color:var(--muted);margin-bottom:.25rem}
+.prog-bar{height:.65rem;background:#e4e4df;border-radius:999px;overflow:hidden}.prog-fill{height:100%;background:var(--green);width:0;transition:width .2s}
+main{flex:1;padding:.85rem clamp(.7rem,3vw,1rem) 8rem}
+.setup{display:flex;flex-direction:column;align-items:center;gap:.9rem;padding:1.4rem .2rem}
+.setup-icon{font-size:4rem}.setup h1{font-size:1.45rem;margin:0}.setup-sub{margin:0;color:var(--muted);text-align:center}
+.card{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1rem}
+.label{display:block;font-size:.83rem;font-weight:800;color:#555;margin:0 0 .4rem}
+.input,.select{width:100%;min-height:var(--tap);padding:.72rem .8rem;border:1px solid #bcbcb6;border-radius:.7rem;background:#fff;color:var(--text)}
+.code-input{text-transform:uppercase;letter-spacing:.3rem;text-align:center;font-weight:800;font-size:1.35rem}
+.btn{border:1px solid var(--line);background:#f2f2ef;color:var(--text);border-radius:.7rem;min-height:var(--tap);padding:.65rem .85rem;font-weight:750;cursor:pointer}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.success{background:var(--green);border-color:var(--green);color:#fff}.btn.danger{background:var(--red-soft);border-color:#f0b8b4;color:var(--red)}
+.btn.full{width:100%}.stack{display:grid;gap:.55rem}.row{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap}.row>*{min-width:0}
+.saved-list{width:100%;display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);background:#fafaf8;border-radius:.75rem;padding:.7rem;text-align:left;min-height:3.6rem}.saved-list strong{display:block}.muted{color:var(--muted);font-size:.85rem}
+.banner{border:1px solid #b8d6ef;background:var(--blue-soft);border-radius:var(--radius);padding:.75rem .85rem;margin-bottom:.7rem}
+.complete{background:var(--green-soft);border-color:#a8ddca;text-align:center;padding:1rem}.complete h2{margin:.2rem 0;font-size:1.2rem}.complete p{margin:.2rem 0 .8rem;color:#276b58}
+.roomline{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.roomcode{font:800 1.2rem ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2rem;color:#095b98}
+.members{display:flex;gap:.35rem;overflow:auto;padding:.2rem 0 .6rem;scrollbar-width:thin}.avatar{width:2.35rem;height:2.35rem;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--blue-soft);border:2px solid #fff;font-size:.85rem;font-weight:800;color:#095b98}
+.avatar.you{background:var(--green-soft);color:#1e624f;border-color:#9ed7c5}
+.cat{margin:.4rem 0 .9rem}.cat-toggle{width:100%;border:0;background:transparent;display:flex;gap:.45rem;align-items:center;text-align:left;min-height:var(--tap);padding:.4rem .2rem;border-radius:.55rem;font-weight:800;color:#4c4c4c}
+.cat-toggle .count{font-size:.75rem;background:#ecece8;border-radius:999px;padding:.12rem .48rem}.cat-toggle .chev{margin-left:auto}
+.item-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}.item{display:flex;align-items:stretch;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}.item.done{opacity:.58}.item-main{flex:1;border:0;background:transparent;display:flex;align-items:center;gap:.7rem;text-align:left;padding:.75rem;min-height:4.2rem;color:var(--text)}.item-emoji{font-size:2rem;width:2.5rem;text-align:center;flex:none}.item-name{font-size:1.08rem;font-weight:800}.item.done .item-name{text-decoration:line-through}.item-meta{font-size:.82rem;color:var(--blue);font-weight:700}.item-who{font-size:.75rem;color:var(--muted)}.check{margin-left:auto;width:1.9rem;height:1.9rem;border:2px solid #aaa;border-radius:50%;display:grid;place-items:center;flex:none}.done .check{background:var(--green);border-color:var(--green);color:#fff}.actions{display:flex;flex-direction:column}.actions button{width:3.2rem;flex:1;border:0;border-left:1px solid var(--line);background:#f4f4f1;min-height:2.3rem}.actions button+button{border-top:1px solid var(--line);background:var(--red-soft)}
+.empty{text-align:center;color:var(--muted);padding:2.5rem 1rem}.empty .big{font-size:3.3rem}.empty h2{color:var(--text);font-size:1.1rem}
+.fav-search{margin-bottom:.75rem}.fav-title{font-weight:850;margin:1rem 0 .45rem;display:flex;gap:.4rem;align-items:center}.favgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}.fav{position:relative;border:1px solid var(--line);background:#fff;border-radius:.8rem;min-height:6.4rem;padding:.6rem;text-align:center;display:grid;place-items:center;gap:.2rem;color:var(--text)}.fav.on{background:var(--green-soft);border-color:#98d5c0}.fav .e{font-size:2rem}.fav .n{font-size:.9rem;font-weight:750}.fav .x{position:absolute;right:.2rem;top:.2rem;border:0;background:transparent;min-width:2.5rem;min-height:2.5rem;border-radius:50%}
+.section-title{font-size:1.1rem;margin:.2rem 0 .7rem}.suggestions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem;margin:.45rem 0 .9rem}.suggestion{border:1px solid #b8d6ef;background:var(--blue-soft);border-radius:.75rem;padding:.55rem .3rem;min-height:4.7rem;font-size:.82rem;font-weight:750;color:#174d76}.suggestion span{display:block;font-size:1.45rem}
+.hcard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:.9rem;margin-bottom:.65rem}.hhead{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start}.hdate{font-weight:850}.hmeta{font-size:.78rem;color:var(--muted)}.hitems{display:flex;flex-wrap:wrap;gap:.3rem;margin:.6rem 0}.hitem{background:#f0f0ec;border-radius:.5rem;padding:.3rem .45rem;font-size:.78rem}
+.member-row,.manage-row{display:flex;gap:.45rem;align-items:center;border-bottom:1px solid #eee;padding:.55rem 0}.member-row:last-child,.manage-row:last-child{border-bottom:0}.member-info,.manage-info{flex:1;min-width:0}.mini{min-width:2.7rem;min-height:2.7rem;border:1px solid var(--line);background:#f5f5f2;border-radius:.6rem}
+.addp{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#fff;border-top:1px solid var(--line);padding:.65rem max(.7rem,env(safe-area-inset-right)) calc(.65rem + env(safe-area-inset-bottom)) max(.7rem,env(safe-area-inset-left));box-shadow:0 -2px 12px rgba(0,0,0,.08)}.addp-inner{width:min(100%,42rem);margin:auto}.addrow{display:flex;gap:.45rem}.addrow .input{flex:1}.addbtn{width:3.2rem;flex:none;font-size:1.5rem}.voice{width:100%;margin-top:.4rem}
+.sheet{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.48);display:flex;align-items:flex-end;justify-content:center}.sheet-inner{width:min(100%,42rem);max-height:92vh;overflow:auto;background:#fff;border-radius:1.1rem 1.1rem 0 0;padding:1rem 1rem calc(1rem + env(safe-area-inset-bottom))}.sheet h2{font-size:1.15rem;margin:.2rem 0 .8rem}.qtyrow{display:grid;grid-template-columns:3.1rem minmax(0,1fr) 3.1rem;gap:.45rem;align-items:center}.qtybtn{width:3.1rem;height:3.1rem;border-radius:50%;border:1px solid var(--line);background:#f2f2ef;font-size:1.4rem}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem}.choice{border:1px solid var(--line);background:#fff;border-radius:.65rem;min-height:3.1rem;padding:.35rem .2rem;font-size:.78rem;color:var(--text)}.choice.active{background:var(--blue-soft);border-color:#78b7e7;color:#124a73;font-weight:850}.gridcats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem}.gridcats .choice{min-height:4.2rem}.gridcats .choice span{display:block;font-size:1.25rem}
+.dialog-actions{display:flex;gap:.5rem;margin-top:1rem}.dialog-actions .btn{flex:1}
+#toast{position:fixed;z-index:500;left:50%;bottom:6.7rem;transform:translate(-50%,7rem);max-width:min(90vw,34rem);background:#1f1f1f;color:#fff;padding:.7rem 1rem;border-radius:.7rem;box-shadow:0 4px 18px rgba(0,0,0,.25);transition:transform .2s;pointer-events:none;text-align:center;font-weight:700}#toast.show{transform:translate(-50%,0)}
+.offline-note{background:var(--orange-soft);border:1px solid #edcf92;color:#714600;border-radius:.7rem;padding:.55rem .7rem;margin-bottom:.7rem;font-size:.85rem}
+@media (max-width:24rem){.tabs button{font-size:.72rem}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.gridcats{grid-template-columns:repeat(2,minmax(0,1fr))}.suggestions{grid-template-columns:repeat(2,minmax(0,1fr))}.actions button{width:2.9rem}}
+@media (min-width:40rem){.favgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<h2 class="sr-only">Lista de compra familiar compartida en tiempo real</h2>
 <div id="app">
-  <header id="hdr" style="display:none">
+  <header id="hdr" hidden>
     <div class="hdr-top">
-      <span aria-hidden="true" style="font-size:1.6rem">🛒</span>
-      <h1 id="hdr-title" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">Mi lista</h1>
-      <button id="list-switcher" onclick="toggleListsPanel()" aria-label="Cambiar de lista" style="display:none;align-items:center;gap:.3rem;background:#f0f0ec;border:1px solid #ddd;border-radius:8px;padding:.3rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#555;min-height:36px;white-space:nowrap;flex-shrink:0">
-        <span id="switcher-label">Lista</span> ▾
-      </button>
-      <div class="sync-badge" aria-live="polite" aria-label="Estado de sincronización">
-        <div class="sdot" id="sdot"></div>
-        <span id="slbl">Conectando…</span>
-      </div>
+      <span class="icon" aria-hidden="true">🛒</span>
+      <h1 id="hdr-title" class="hdr-title">Mi lista</h1>
+      <button id="list-switcher" class="switcher" type="button" aria-label="Cambiar de lista">Lista ▾</button>
+      <div class="sync-badge" aria-live="polite"><span id="sdot" class="sdot"></span><span id="slbl">Conectando…</span></div>
     </div>
-    <nav role="tablist" aria-label="Secciones">
-      <button role="tab" id="tab-lista" aria-selected="true" aria-controls="panel-lista">Lista</button>
-      <button role="tab" id="tab-favs" aria-selected="false" aria-controls="panel-favs">Favoritos</button>
-      <button role="tab" id="tab-hist" aria-selected="false" aria-controls="panel-hist">Historial</button>
-      <button role="tab" id="tab-share" aria-selected="false" aria-controls="panel-share">Compartir</button>
-    </nav>
-    <div class="prog-wrap" id="pwrap">
-      <div class="prog-lbl" id="plbl">0 de 0 productos</div>
-      <div class="prog-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso">
-        <div class="prog-fill" id="pfill" style="width:0%"></div>
-      </div>
+    <div id="lists-panel" class="card" hidden style="margin-top:.55rem"></div>
+    <div class="tabs" role="tablist" aria-label="Secciones">
+      <button type="button" role="tab" id="tab-lista" aria-selected="true" aria-controls="panel-lista">Lista</button>
+      <button type="button" role="tab" id="tab-favs" aria-selected="false" aria-controls="panel-favs">Favoritos</button>
+      <button type="button" role="tab" id="tab-hist" aria-selected="false" aria-controls="panel-hist">Historial</button>
+      <button type="button" role="tab" id="tab-share" aria-selected="false" aria-controls="panel-share">Compartir</button>
+    </div>
+    <div id="pwrap" class="prog-wrap">
+      <div id="plbl" class="prog-lbl">0 de 0 productos</div>
+      <div class="prog-bar" role="progressbar" aria-label="Progreso de la compra" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="pfill" class="prog-fill"></div></div>
     </div>
   </header>
 
-  <main tabindex="-1">
-    <!-- PANTALLA INICIO: siempre visible al arrancar -->
-    <div id="setup" class="setup">
+  <main id="main" tabindex="-1">
+    <section id="setup" class="setup" aria-labelledby="setup-title">
       <div class="setup-icon" aria-hidden="true">🛒</div>
-      <h2 class="setup-title">Lista de la compra</h2>
-      <p class="setup-sub">Elige una lista o crea una nueva</p>
-
-      <!-- Listas guardadas -->
-      <div id="saved-lists-wrap" style="width:100%;max-width:400px;display:none">
-        <div class="scard-lbl" style="margin-bottom:.5rem">Mis listas</div>
-        <div id="saved-lists-container" class="saved-lists"></div>
-        <div style="margin-top:.5rem;margin-bottom:.5rem;text-align:center;font-size:.8rem;color:#aaa">— o —</div>
+      <h1 id="setup-title">Lista de la compra</h1>
+      <p class="setup-sub">Elige una lista guardada, crea una nueva o únete con un código.</p>
+      <div id="saved-wrap" class="card" hidden><div class="label">Mis listas</div><div id="saved-lists" class="stack"></div></div>
+      <div class="card stack">
+        <div><label class="label" for="sname">Tu nombre</label><input class="input" id="sname" maxlength="30" autocomplete="given-name" placeholder="¿Cómo te llamas?"></div>
+        <button class="btn primary full" id="create-room" type="button">＋ Crear lista nueva</button>
+        <div class="muted" style="text-align:center">— o únete a una lista —</div>
+        <div><label class="label" for="scode">Código de lista</label><input class="input code-input" id="scode" maxlength="4" inputmode="text" autocomplete="off" placeholder="XXXX"></div>
+        <button class="btn full" id="join-room" type="button">Unirse</button>
       </div>
+    </section>
 
-      <!-- Nombre usuario -->
-      <div class="scard" style="width:100%;max-width:400px">
-        <div class="scard-lbl">Tu nombre</div>
-        <input class="ninp" id="sname" type="text" placeholder="¿Cómo te llamas?" maxlength="20" aria-label="Tu nombre" autocomplete="given-name">
-        <button class="btn-p" onclick="createRoom()" style="margin-bottom:.5rem">＋ Crear lista nueva</button>
-        <div class="or">— o únete a una lista con código —</div>
-        <input class="cinp" id="scode" type="text" maxlength="4" placeholder="XXXX" aria-label="Código de sala" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
-        <button class="btn-s" onclick="joinRoom()">Unirse</button>
-      </div>
-    </div>
+    <div id="offline-note" class="offline-note" hidden role="status">Estás sin conexión. Puedes seguir trabajando; los cambios pendientes se intentarán sincronizar al volver la conexión.</div>
 
-    <!-- PANELS (app activa) -->
-    <div id="panels" style="display:none">
-
-      <!-- Panel selector de listas -->
-      <div id="lists-panel" style="display:none;background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:.8rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.6rem">Mis listas</div>
-        <div id="lists-container"></div>
-        <button onclick="createNewList()" style="width:100%;padding:.65rem;border:1px dashed #d0d0cc;border-radius:10px;background:none;color:#666;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:.5rem;min-height:2.75rem">＋ Nueva lista</button>
-        <div style="margin-top:.5rem">
-          <button onclick="goToSetup()" style="width:100%;padding:.65rem;border:1px solid #d0d0cc;border-radius:10px;background:#f0f0ec;color:#555;font-size:.9rem;font-weight:600;cursor:pointer;min-height:2.75rem">Unirse a lista con código</button>
+    <div id="panels" hidden>
+      <section id="panel-lista" role="tabpanel" aria-labelledby="tab-lista">
+        <div id="room-banner" class="banner"></div>
+        <div id="members-chips" class="members" aria-label="Miembros de la lista"></div>
+        <div id="complete-banner" hidden class="banner complete">
+          <div style="font-size:2.5rem" aria-hidden="true">🎉</div>
+          <h2>¡Todo cogido!</h2>
+          <p>Has marcado todos los productos.</p>
+          <button class="btn success full" id="finish-btn" type="button">Finalizar compra</button>
         </div>
-      </div>
+        <div id="list-content"></div>
+      </section>
 
-      <div id="panel-lista" role="tabpanel" aria-labelledby="tab-lista">
-        <div class="mrow" id="mrow" aria-live="polite"></div>
-        <div id="cbanner" style="display:none" class="cbanner" aria-live="assertive">
-          <div class="cbanner-icon" aria-hidden="true">🎉</div>
-          <div class="cbanner-title">¡Todo cogido!</div>
-          <div class="cbanner-sub">Has marcado todos los productos</div>
-          <button class="btn-finish" onclick="showModal()">Finalizar compra</button>
+      <section id="panel-favs" role="tabpanel" aria-labelledby="tab-favs" hidden>
+        <h2 class="section-title">Favoritos</h2>
+        <div id="smart-suggestions-wrap" hidden>
+          <div class="label">Tus más usados</div><div id="smart-suggestions" class="suggestions"></div>
         </div>
-        <div id="items-c" aria-live="polite" aria-label="Lista de la compra"></div>
-      </div>
-
-      <div id="panel-favs" role="tabpanel" aria-labelledby="tab-favs" style="display:none">
-        <input class="fav-search" id="fav-search" type="search" placeholder="🔍 Buscar producto…" aria-label="Buscar en favoritos" oninput="renderFavs()">
+        <label class="sr-only" for="fav-search">Buscar producto favorito</label>
+        <input id="fav-search" class="input fav-search" type="search" placeholder="🔍 Buscar producto…">
+        <button id="add-custom-fav" class="btn full" type="button" style="margin-bottom:.8rem">＋ Añadir favorito personalizado</button>
         <div id="favgrid"></div>
-      </div>
+      </section>
 
-      <div id="panel-hist" role="tabpanel" aria-labelledby="tab-hist" style="display:none">
-        <div id="hist-c"></div>
-      </div>
+      <section id="panel-hist" role="tabpanel" aria-labelledby="tab-hist" hidden>
+        <h2 class="section-title">Historial de compras</h2>
+        <div id="hist-content"></div>
+      </section>
 
-      <div id="panel-share" role="tabpanel" aria-labelledby="tab-share" style="display:none">
-        <div class="shcard">
-          <div class="shttl">Comparte por WhatsApp</div>
-          <div class="bigcode" id="bigcode">----</div>
-          <button class="btn-p" onclick="shareCode()">📲 Compartir por WhatsApp</button>
-          <div style="margin-top:.5rem"><button class="btn-s" onclick="copyCode()">Copiar código</button></div>
+      <section id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden>
+        <h2 class="section-title">Compartir y gestionar</h2>
+        <div class="card stack">
+          <div><span class="label">Código de esta lista</span><div id="bigcode" class="roomcode"></div></div>
+          <button class="btn primary full" id="whatsapp-btn" type="button">📲 Compartir por WhatsApp</button>
+          <button class="btn full" id="copy-code-btn" type="button">Copiar código</button>
         </div>
-
-        <div class="shcard">
-          <div class="shttl">Miembros</div>
-          <div id="mfull" aria-live="polite"></div>
+        <h3>Miembros</h3><div id="share-members" class="card"></div>
+        <h3>Mis listas</h3><div id="share-lists" class="card"></div>
+        <div class="stack" style="margin-top:.7rem">
+          <button class="btn primary full" id="new-list-share" type="button">＋ Nueva lista</button>
+          <button class="btn full" id="join-list-share" type="button">Unirse a otra lista</button>
         </div>
-        <div class="shcard">
-          <div class="shttl">Mis listas</div>
-          <div id="share-lists-container"></div>
-          <button onclick="createNewList()" style="width:100%;padding:.65rem;border:1px dashed #d0d0cc;border-radius:10px;background:none;color:#378add;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:.5rem;min-height:2.75rem">＋ Nueva lista</button>
-          <div style="margin-top:.5rem">
-            <input class="cinp" id="join-code-share" type="text" maxlength="4" placeholder="XXXX" aria-label="Código de sala" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" style="margin-bottom:.4rem">
-            <button class="btn-s" onclick="joinFromShare()">Unirse a lista con código</button>
-          </div>
-        </div>
-
-      </div>
+      </section>
     </div>
   </main>
 
-  <!-- Modal finalizar -->
-  <div id="modal-overlay" class="overlay" style="display:none" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-icon" aria-hidden="true">📦</div>
-      <div class="modal-title">¿Finalizar esta compra?</div>
-      <div class="modal-sub">La lista se archivará con fecha y hora. Empezaréis con una lista nueva en blanco con el mismo código.</div>
-      <div class="modal-btns">
-        <button class="mcancel" onclick="hideModal()">Cancelar</button>
-        <button class="mconfirm" onclick="finishShopping()">Archivar y nueva lista</button>
+  <div id="addp" class="addp" hidden>
+    <div class="addp-inner">
+      <div class="addrow">
+        <label class="sr-only" for="ainp">Nombre del producto</label>
+        <input id="ainp" class="input" autocomplete="off" placeholder="Escribe un producto…">
+        <button id="add-item-btn" class="btn primary addbtn" type="button" aria-label="Añadir producto">＋</button>
       </div>
+      <button id="voice-btn" class="btn voice" type="button">🎤 Hablar</button>
     </div>
-  </div>
-
-  <!-- Sheet añadir/editar -->
-  <div id="qty-sheet" class="sheet" style="display:none" role="dialog" aria-modal="true">
-    <div class="sheet-inner">
-      <div class="sheet-title">
-        <span class="sheet-emoji" id="sheet-emoji">🛒</span>
-        <span id="sheet-title-txt">Añadir producto</span>
-      </div>
-      <div class="sheet-label">Cantidad</div>
-      <div class="qty-row">
-        <button class="qty-btn" onclick="changeQty(-1)" aria-label="Reducir cantidad">−</button>
-        <input class="qty-val" id="qty-val" type="number" min="0.1" step="any" value="1" aria-label="Cantidad">
-        <button class="qty-btn" onclick="changeQty(1)" aria-label="Aumentar cantidad">+</button>
-      </div>
-      <div class="sheet-label">Unidad</div>
-      <div class="unit-grid" id="unit-grid"></div>
-      <div class="sheet-label">Categoría</div>
-      <div class="cat-grid" id="cat-grid-sheet"></div>
-      <div class="sheet-btns">
-        <button class="sbcancel" onclick="closeSheet()">Cancelar</button>
-        <button class="sbconfirm" onclick="confirmSheet()">Confirmar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add panel — SIN accesos rápidos -->
-  <div id="addp" class="addp" style="display:none">
-    <div class="addrow">
-      <input class="addinp" id="ainp" type="text" placeholder="Escribe un producto…" aria-label="Nombre del producto" autocomplete="off" onkeydown="if(event.key==='Enter')addItem()">
-      <button class="btnadd" onclick="addItem()" aria-label="Añadir">＋</button>
-    </div>
-    <button class="btnvox" id="bvox" onclick="toggleVoice()" aria-label="Añadir por voz">
-      <div class="vdot" id="vdot" aria-hidden="true"></div>
-      <span id="vtxt">🎤 Hablar</span>
-    </button>
   </div>
 </div>
-<div id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
-<!-- Firebase -->
+<div id="sheet" class="sheet" hidden aria-hidden="true">
+  <div class="sheet-inner" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <h2 id="sheet-title">Añadir producto</h2>
+    <div id="sheet-suggestions-wrap" hidden><div class="label">Añades a menudo</div><div id="sheet-suggestions" class="suggestions"></div></div>
+    <label class="label" for="qty">Cantidad</label>
+    <div class="qtyrow"><button class="qtybtn" id="qty-minus" type="button" aria-label="Reducir cantidad">−</button><input class="input" id="qty" type="number" min="0.1" step="any" value="1" inputmode="decimal"><button class="qtybtn" id="qty-plus" type="button" aria-label="Aumentar cantidad">+</button></div>
+    <div class="label" style="margin-top:.8rem">Unidad</div><div id="unit-grid" class="grid4"></div>
+    <div class="label" style="margin-top:.8rem">Categoría</div><div id="cat-grid" class="gridcats"></div>
+    <div class="dialog-actions"><button id="sheet-cancel" class="btn" type="button">Cancelar</button><button id="sheet-confirm" class="btn primary" type="button">Confirmar</button></div>
+  </div>
+</div>
+
+<div id="finish-dialog" class="sheet" hidden aria-hidden="true">
+  <div class="sheet-inner" role="dialog" aria-modal="true" aria-labelledby="finish-title">
+    <h2 id="finish-title">¿Finalizar esta compra?</h2>
+    <p id="finish-text">La compra se archivará y empezaréis con una lista nueva en blanco.</p>
+    <div id="unfinished-options" hidden class="card stack">
+      <strong>Quedan productos sin marcar.</strong>
+      <label><input type="radio" name="unfinished" value="archive" checked> Incluirlos también en el historial</label>
+      <label><input type="radio" name="unfinished" value="discard"> No incluirlos en la compra archivada</label>
+      <label><input type="radio" name="unfinished" value="keep"> Mantenerlos en la nueva lista</label>
+    </div>
+    <div class="dialog-actions"><button id="finish-cancel" class="btn" type="button">Cancelar</button><button id="finish-confirm" class="btn success" type="button">Archivar compra</button></div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-const firebaseConfig={apiKey:"AIzaSyCtEChAlduFzKXTSnSGbnixydc6EZojJDo",authDomain:"lista-de-la-compra-763d1.firebaseapp.com",databaseURL:"https://lista-de-la-compra-763d1-default-rtdb.europe-west1.firebasedatabase.app",projectId:"lista-de-la-compra-763d1",storageBucket:"lista-de-la-compra-763d1.firebasestorage.app",messagingSenderId:"446848344763",appId:"1:446848344763:web:fa5aa00dbeb115be647f9e"};
+import { getDatabase, ref, set, update, onValue, get, runTransaction, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyCtEChAlduFzKXTSnSGbnixydc6EZojJDo",
+  authDomain:"lista-de-la-compra-763d1.firebaseapp.com",
+  databaseURL:"https://lista-de-la-compra-763d1-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"lista-de-la-compra-763d1",
+  storageBucket:"lista-de-la-compra-763d1.firebasestorage.app",
+  messagingSenderId:"446848344763",
+  appId:"1:446848344763:web:fa5aa00dbeb115be647f9e"
+};
 const fbApp=initializeApp(firebaseConfig);
 const db=getDatabase(fbApp);
-window._fbSet=(path,data)=>set(ref(db,path),data);
-window._fbGet=(path)=>get(ref(db,path));
-window._fbListen=(path,cb)=>onValue(ref(db,path),snap=>cb(snap.val()));
-window._fbReady=true;
+const auth=getAuth(fbApp);
+
+window.FB={
+  get:path=>get(ref(db,path)),
+  set:(path,data)=>set(ref(db,path),data),
+  update:(path,data)=>update(ref(db,path),data),
+  listen:(path,cb)=>onValue(ref(db,path),s=>cb(s.val(),s)),
+  tx:(path,fn)=>runTransaction(ref(db,path),fn),
+  disconnectRemove:path=>onDisconnect(ref(db,path)).remove(),
+  serverTimestamp
+};
+
+try{
+  await signInAnonymously(auth);
+}catch(e){
+  console.warn("Firebase Anonymous Auth no está habilitado todavía. La app seguirá funcionando mientras las reglas actuales permitan acceso.",e);
+  window.dispatchEvent(new CustomEvent("fb-auth-ready"));
+}
+onAuthStateChanged(auth,user=>{
+  window.FB.uid=user?.uid||null;
+  window.dispatchEvent(new CustomEvent("fb-auth-ready"));
+});
+window.FB.ready=true;
+window.dispatchEvent(new CustomEvent("fb-ready"));
 </script>
 
 <script>
 const CATS=[
-  {id:'panaderia',name:'Panadería',emoji:'🍞',kw:['pan','baguette','croissant','bizcocho','galleta','bollo','tostada','hojaldre'],items:[{n:'Pan',e:'🍞'},{n:'Baguette',e:'🥖'},{n:'Croissant',e:'🥐'},{n:'Pan de molde',e:'🍞'},{n:'Tostadas',e:'🍞'},{n:'Bizcocho',e:'🧁'},{n:'Galletas',e:'🍪'},{n:'Bollería',e:'🥐'}]},
-  {id:'fruteria',name:'Frutería',emoji:'🍎',kw:['manzana','plátano','platano','naranja','limón','limon','fresa','uva','pera','melocotón','melocoton','kiwi','sandía','sandia','melón','melon','mandarina','cereza','fruta','piña','pina'],items:[{n:'Manzanas',e:'🍎'},{n:'Plátanos',e:'🍌'},{n:'Naranjas',e:'🍊'},{n:'Limones',e:'🍋'},{n:'Fresas',e:'🍓'},{n:'Uvas',e:'🍇'},{n:'Peras',e:'🍐'},{n:'Melocotones',e:'🍑'},{n:'Kiwi',e:'🥝'},{n:'Sandía',e:'🍉'},{n:'Melón',e:'🍈'},{n:'Mandarinas',e:'🍊'},{n:'Cerezas',e:'🍒'}]},
-  {id:'verduleria',name:'Verdulería',emoji:'🥦',kw:['tomate','zanahoria','brócoli','brocoli','cebolla','patata','lechuga','pimiento','pepino','ajo','calabacín','calabacin','espinaca','champiñón','champinon','berenjena','verdura','acelga','apio','seta','coliflor'],items:[{n:'Tomates',e:'🍅'},{n:'Zanahorias',e:'🥕'},{n:'Brócoli',e:'🥦'},{n:'Cebollas',e:'🧅'},{n:'Patatas',e:'🥔'},{n:'Lechuga',e:'🥬'},{n:'Pimientos',e:'🫑'},{n:'Pepinos',e:'🥒'},{n:'Ajo',e:'🧄'},{n:'Calabacín',e:'🥒'},{n:'Espinacas',e:'🌿'},{n:'Champiñones',e:'🍄'},{n:'Berenjenas',e:'🍆'},{n:'Coliflor',e:'🥦'},{n:'Aceitunas',e:'🫒'}]},
-  {id:'lacteos',name:'Lácteos y huevos',emoji:'🥛',kw:['leche','queso','yogur','mantequilla','huevo','nata','margarina','lácteo','lacteo','requesón','requeson','kéfir','kefir'],items:[{n:'Leche entera',e:'🥛'},{n:'Leche desnatada',e:'🥛'},{n:'Queso',e:'🧀'},{n:'Queso fresco',e:'🧀'},{n:'Yogur natural',e:'🫙'},{n:'Yogur con frutas',e:'🫙'},{n:'Mantequilla',e:'🧈'},{n:'Huevos',e:'🥚'},{n:'Docena de huevos',e:'🥚'},{n:'Nata',e:'🥛'},{n:'Margarina',e:'🧈'}]},
-  {id:'carniceria',name:'Carnicería',emoji:'🥩',kw:['pollo','ternera','cerdo','cordero','filete','carne','pechuga','costilla','salchicha','bacon','hamburguesa','morcilla','conejo','pavo','muslo'],items:[{n:'Pechuga de pollo',e:'🍗'},{n:'Pollo entero',e:'🍗'},{n:'Muslos de pollo',e:'🍗'},{n:'Filetes de ternera',e:'🥩'},{n:'Carne picada',e:'🥩'},{n:'Chuletas de cerdo',e:'🐷'},{n:'Cordero',e:'🐑'},{n:'Costillas',e:'🍖'},{n:'Salchichas',e:'🌭'},{n:'Bacon',e:'🥓'},{n:'Hamburguesas',e:'🍔'},{n:'Morcilla',e:'🍖'}]},
-  {id:'charcuteria',name:'Charcutería',emoji:'🍖',kw:['jamón','jamon','chorizo','salchichón','salchichon','mortadela','fuet','embutido','lomo','sobrasada','pavo lonchas'],items:[{n:'Jamón serrano',e:'🍖'},{n:'Jamón cocido',e:'🍖'},{n:'Chorizo',e:'🌶️'},{n:'Salchichón',e:'🍖'},{n:'Mortadela',e:'🍖'},{n:'Pavo en lonchas',e:'🦃'},{n:'Fuet',e:'🍖'},{n:'Lomo embuchado',e:'🍖'}]},
-  {id:'pescaderia',name:'Pescadería',emoji:'🐟',kw:['merluza','salmón','salmon','atún','atun','gamba','mejillón','mejillon','sardina','bacalao','langostino','rape','dorada','lubina','calamar','sepia','pescado','marisco','boquerón','boqueron'],items:[{n:'Merluza',e:'🐟'},{n:'Salmón',e:'🐠'},{n:'Atún',e:'🐡'},{n:'Gambas',e:'🦐'},{n:'Mejillones',e:'🦪'},{n:'Sardinas',e:'🐟'},{n:'Bacalao',e:'🐟'},{n:'Langostinos',e:'🦐'},{n:'Dorada',e:'🐟'},{n:'Calamares',e:'🦑'},{n:'Boquerones',e:'🐟'}]},
-  {id:'despensa',name:'Despensa',emoji:'🫙',kw:['arroz','pasta','lenteja','garbanzo','aceite','sal','azúcar','azucar','café','cafe','té','te','harina','conserva','caldo','vinagre','mayonesa','ketchup','espagueti','macarrón','macarron','fideo','legumbre'],items:[{n:'Arroz',e:'🍚'},{n:'Pasta',e:'🍝'},{n:'Espaguetis',e:'🍝'},{n:'Macarrones',e:'🍝'},{n:'Lentejas',e:'🫘'},{n:'Garbanzos',e:'🫘'},{n:'Aceite de oliva',e:'🫒'},{n:'Sal',e:'🧂'},{n:'Azúcar',e:'🍬'},{n:'Café molido',e:'☕'},{n:'Café en cápsulas',e:'☕'},{n:'Té',e:'🫖'},{n:'Harina',e:'🌾'},{n:'Atún en lata',e:'🐡'},{n:'Conservas de tomate',e:'🍅'},{n:'Caldo',e:'🍲'},{n:'Vinagre',e:'🫙'},{n:'Mayonesa',e:'🫙'},{n:'Ketchup',e:'🍅'}]},
-  {id:'bebidas',name:'Bebidas',emoji:'🥤',kw:['agua','zumo','refresco','cerveza','vino','batido','cola','limonada','sidra','cava','bebida','tónica','tonica'],items:[{n:'Agua',e:'💧'},{n:'Agua con gas',e:'💧'},{n:'Zumo de naranja',e:'🍊'},{n:'Refrescos',e:'🥤'},{n:'Cerveza',e:'🍺'},{n:'Vino tinto',e:'🍷'},{n:'Vino blanco',e:'🍾'},{n:'Batidos',e:'🥛'},{n:'Sidra',e:'🍺'},{n:'Cava',e:'🥂'},{n:'Tónica',e:'🥤'}]},
-  {id:'congelados',name:'Congelados',emoji:'🧊',kw:['congelado','pizza','croqueta','helado','guisante','verdura congelada'],items:[{n:'Guisantes congelados',e:'🟢'},{n:'Espinacas congeladas',e:'🌿'},{n:'Pizzas',e:'🍕'},{n:'Croquetas',e:'🍘'},{n:'Helado',e:'🍦'},{n:'Gambas congeladas',e:'🦐'},{n:'Patatas fritas congeladas',e:'🥔'},{n:'Verduras congeladas',e:'🥦'}]},
-  {id:'limpieza',name:'Limpieza del hogar',emoji:'🧹',kw:['lavavajillas','detergente','suavizante','blanqueador','fregona','escoba','bayeta','estropajo','limpiacristales','desinfectante','ambientador','aspiradora','lejía','lejia','quitamanchas','recogedor','cubo','fregar','limpiar','palo'],items:[{n:'Lavavajillas líquido',e:'🍽️'},{n:'Pastillas lavavajillas',e:'🧼'},{n:'Detergente lavadora',e:'🫧'},{n:'Suavizante ropa',e:'🌸'},{n:'Blanqueador ropa',e:'⬜'},{n:'Lejía',e:'🧴'},{n:'Quitamanchas',e:'🧴'},{n:'Fregona',e:'🧹'},{n:'Recambio fregona',e:'🧹'},{n:'Palo escoba',e:'🧹'},{n:'Escoba',e:'🧹'},{n:'Recogedor',e:'🧹'},{n:'Cubo de fregar',e:'🪣'},{n:'Bolsas basura',e:'🗑️'},{n:'Bayetas',e:'🧽'},{n:'Estropajo',e:'🧽'},{n:'Limpiacristales',e:'🪟'},{n:'Desinfectante',e:'🧴'},{n:'Ambientador',e:'💨'},{n:'Funda aspiradora',e:'🌀'},{n:'Bolsas aspiradora',e:'🌀'}]},
-  {id:'higiene',name:'Higiene personal',emoji:'🪥',kw:['papel higiénico','papel higienico','jabón','jabon','champú','champu','gel','pasta dientes','cepillo','desodorante','compresa','tampón','tampon','pañuelo','panuelo','crema','maquinilla','colonia','aftershave','hilo dental','enjuague'],items:[{n:'Papel higiénico',e:'🧻'},{n:'Jabón de manos',e:'🧼'},{n:'Jabón de baño',e:'🧼'},{n:'Champú',e:'🧴'},{n:'Gel de ducha',e:'🚿'},{n:'Pasta de dientes',e:'🪥'},{n:'Cepillo de dientes',e:'🪥'},{n:'Desodorante',e:'💨'},{n:'Compresas',e:'🩹'},{n:'Tampones',e:'🩹'},{n:'Pañuelos',e:'🤧'},{n:'Crema hidratante',e:'🧴'},{n:'Maquinilla de afeitar',e:'🪒'},{n:'Espuma de afeitar',e:'🪒'},{n:'Hilo dental',e:'🪥'},{n:'Enjuague bucal',e:'🪥'}]},
-  {id:'farmacia',name:'Farmacia',emoji:'💊',kw:['paracetamol','ibuprofeno','tirita','alcohol','oxigenada','solar','vitamina','antihistamínico','antihistaminico','mascarilla','termómetro','termometro','colirio','medicamento','aspirina','omeprazol','antigripal'],items:[{n:'Paracetamol',e:'💊'},{n:'Ibuprofeno',e:'💊'},{n:'Aspirina',e:'💊'},{n:'Omeprazol',e:'💊'},{n:'Tiritas',e:'🩹'},{n:'Venda',e:'🩹'},{n:'Alcohol',e:'🧴'},{n:'Agua oxigenada',e:'🧴'},{n:'Crema solar',e:'☀️'},{n:'Vitaminas',e:'💊'},{n:'Antihistamínico',e:'💊'},{n:'Mascarillas',e:'😷'},{n:'Termómetro',e:'🌡️'},{n:'Colirio',e:'👁️'}]},
-  {id:'mascotas',name:'Mascotas',emoji:'🐾',kw:['pienso','perro','gato','mascota','arena gato','snack animal','antiparasitario'],items:[{n:'Pienso perro',e:'🐕'},{n:'Pienso gato',e:'🐈'},{n:'Comida húmeda perro',e:'🥫'},{n:'Comida húmeda gato',e:'🥫'},{n:'Arena gato',e:'🐱'},{n:'Snacks perro',e:'🦴'},{n:'Champú mascota',e:'🧴'},{n:'Antiparasitario',e:'💊'}]},
-  {id:'bebe',name:'Bebé',emoji:'👶',kw:['pañal','pañales','toallita bebé','toallita bebe','fórmula','formula','potito','crema pañal'],items:[{n:'Pañales',e:'👶'},{n:'Toallitas bebé',e:'🧻'},{n:'Leche de fórmula',e:'🍼'},{n:'Potitos',e:'🫙'},{n:'Crema pañal',e:'🧴'},{n:'Papillas',e:'🥣'}]},
-  {id:'varios',name:'Varios',emoji:'🛍️',kw:['pila','bombilla','papel cocina','film','aluminio','bolsa congelación','varios'],items:[{n:'Pilas',e:'🔋'},{n:'Bombillas',e:'💡'},{n:'Papel de cocina',e:'🧻'},{n:'Film transparente',e:'📦'},{n:'Papel de aluminio',e:'✨'},{n:'Bolsas de congelación',e:'❄️'},{n:'Bolsas reutilizables',e:'👜'}]},
+{id:'panaderia',name:'Panadería',emoji:'🍞',kw:['pan','baguette','croissant','bizcocho','galleta','bollo','tostada','hojaldre','tortilla'],items:[['Pan','🍞'],['Baguette','🥖'],['Croissant','🥐'],['Pan de molde','🍞'],['Tostadas','🍞'],['Galletas','🍪'],['Bollería','🥐']]},
+{id:'fruteria',name:'Frutería',emoji:'🍎',kw:['manzana','platano','plátano','naranja','limon','limón','fresa','uva','pera','melocoton','melocotón','kiwi','sandia','sandía','melon','melón','mandarina','cereza','fruta','piña'],items:[['Manzanas','🍎'],['Plátanos','🍌'],['Naranjas','🍊'],['Limones','🍋'],['Fresas','🍓'],['Uvas','🍇'],['Peras','🍐'],['Kiwi','🥝'],['Sandía','🍉'],['Melón','🍈'],['Cerezas','🍒']]},
+{id:'verduleria',name:'Verdulería',emoji:'🥦',kw:['tomate','zanahoria','brocoli','brócoli','cebolla','patata','lechuga','pimiento','pepino','ajo','calabacin','calabacín','espinaca','champiñon','champiñón','berenjena','verdura','coliflor'],items:[['Tomates','🍅'],['Zanahorias','🥕'],['Brócoli','🥦'],['Cebollas','🧅'],['Patatas','🥔'],['Lechuga','🥬'],['Pimientos','🫑'],['Pepinos','🥒'],['Ajo','🧄'],['Calabacín','🥬'],['Champiñones','🍄'],['Berenjenas','🍆']]},
+{id:'lacteos',name:'Lácteos y huevos',emoji:'🥛',kw:['leche','queso','yogur','mantequilla','huevo','nata','margarina','kefir','kéfir'],items:[['Leche','🥛'],['Queso','🧀'],['Yogur','🥣'],['Mantequilla','🧈'],['Huevos','🥚'],['Nata','🥛'],['Kéfir','🥛']]},
+{id:'carniceria',name:'Carnicería',emoji:'🥩',kw:['pollo','ternera','cerdo','cordero','filete','carne','pechuga','costilla','salchicha','bacon','hamburguesa','conejo','pavo'],items:[['Pechuga de pollo','🍗'],['Pollo entero','🍗'],['Filetes de ternera','🥩'],['Carne picada','🥩'],['Chuletas de cerdo','🥩'],['Costillas','🍖'],['Salchichas','🌭'],['Bacon','🥓']]},
+{id:'charcuteria',name:'Charcutería',emoji:'🍖',kw:['jamon','jamón','chorizo','salchichon','salchichón','mortadela','fuet','embutido','lomo','sobrasada'],items:[['Jamón serrano','🍖'],['Jamón cocido','🍖'],['Chorizo','🌶️'],['Salchichón','🍖'],['Mortadela','🍖'],['Pavo en lonchas','🦃'],['Fuet','🍖']]},
+{id:'pescaderia',name:'Pescadería',emoji:'🐟',kw:['merluza','salmon','salmón','atun','atún','gamba','mejillon','mejillón','sardina','bacalao','langostino','rape','dorada','lubina','calamar','sepia','pescado','marisco'],items:[['Merluza','🐟'],['Salmón','🐟'],['Atún','🐟'],['Gambas','🦐'],['Mejillones','🦪'],['Sardinas','🐟'],['Bacalao','🐟'],['Langostinos','🦐'],['Calamares','🦑']]},
+{id:'despensa',name:'Despensa',emoji:'🥫',kw:['arroz','pasta','harina','azucar','azúcar','sal','aceite','vinagre','cafe','café','legumbre','lenteja','garbanzo','conserva','tomate frito','cereal','sopa'],items:[['Arroz','🍚'],['Pasta','🍝'],['Harina','🧂'],['Azúcar','🧂'],['Sal','🧂'],['Aceite de oliva','🫒'],['Café','☕'],['Lentejas','🥫'],['Garbanzos','🥫'],['Tomate frito','🥫']]},
+{id:'bebidas',name:'Bebidas',emoji:'🥤',kw:['agua','refresco','zumo','cerveza','vino','cola','tonica','tónica','bebida'],items:[['Agua','💧'],['Agua con gas','🫧'],['Zumo','🧃'],['Refresco','🥤'],['Cerveza','🍺'],['Vino','🍷']]},
+{id:'congelados',name:'Congelados',emoji:'❄️',kw:['congelado','pizza','helado','hielo','croqueta','nugget'],items:[['Pizza congelada','🍕'],['Helado','🍨'],['Croquetas','🥟'],['Verduras congeladas','🥦'],['Hielo','🧊']]},
+{id:'limpieza',name:'Limpieza del hogar',emoji:'🧹',kw:['detergente','lejia','lejía','suavizante','lavavajillas','limpiador','papel cocina','bolsa basura','estropajo','bayeta'],items:[['Detergente','🧴'],['Suavizante','🧴'],['Lavavajillas','🫧'],['Lejía','🧴'],['Papel de cocina','🧻'],['Bolsas de basura','🗑️'],['Estropajos','🧽']]},
+{id:'higiene',name:'Higiene personal',emoji:'🧴',kw:['champu','champú','gel','jabon','jabón','pasta dientes','dentifrico','desodorante','papel higienico','papel higiénico','cepillo','afeitar'],items:[['Champú','🧴'],['Gel de ducha','🧴'],['Jabón','🧼'],['Pasta de dientes','🪥'],['Desodorante','🧴'],['Papel higiénico','🧻'],['Cuchillas de afeitar','🪒']]},
+{id:'farmacia',name:'Farmacia',emoji:'💊',kw:['paracetamol','ibuprofeno','medicina','medicamento','farmacia','tirita','termometro','termómetro','suero'],items:[['Paracetamol','💊'],['Ibuprofeno','💊'],['Tiritas','🩹'],['Suero fisiológico','💧'],['Termómetro','🌡️']]},
+{id:'mascotas',name:'Mascotas',emoji:'🐾',kw:['perro','gato','mascota','pienso','arena gato','premio'],items:[['Pienso perro','🐶'],['Pienso gato','🐱'],['Arena para gato','🐈'],['Premios mascota','🦴']]},
+{id:'bebe',name:'Bebé',emoji:'👶',kw:['pañal','panal','bebe','bebé','toallita','potito','papilla','leche infantil'],items:[['Pañales','👶'],['Toallitas','🧻'],['Potitos','🥣'],['Papilla','🥣'],['Leche infantil','🍼']]},
+{id:'varios',name:'Varios',emoji:'🛒',kw:[],items:[['Pilas','🔋'],['Bombillas','💡'],['Servilletas','🧻'],['Velas','🕯️']]}
 ];
+const UNITS=[['u','unid.'],['kg','kg'],['g','g'],['l','litros'],['ml','ml'],['doc','docena'],['pack','pack'],['caja','caja']];
+const INACTIVE_MS=24*60*60*1000;
+let S={roomCode:null,myName:'',items:[],members:{},history:[],collapsed:{},listName:'Lista'};
+let myLists=[], customFavs=[], fbUnsub=null, currentSheet=null, lastFocus=null, pendingOps=[];
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uidKey=()=>window.FB?.uid||('legacy_'+norm(S.myName).replace(/[^a-z0-9_-]/g,'_'));
+const now=()=>Date.now();
+const makeId=()=>crypto?.randomUUID?.()||(`${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
-const EMAP={};CATS.forEach(c=>c.items.forEach(i=>{EMAP[i.n]=i.e;}));
-function getE(n){return EMAP[n]||'🛒';}
-function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-function getCat(name){
-  const n=norm(name);
-  for(const c of CATS){
-    if(c.items.some(i=>norm(i.n)===n))return c.id;
-    if(c.kw.some(k=>n.includes(norm(k))))return c.id;
-  }
-  return 'varios';
-}
-
-const UNITS=[{id:'u',label:'unid.'},{id:'kg',label:'kg'},{id:'g',label:'g'},{id:'l',label:'litros'},{id:'ml',label:'ml'},{id:'doc',label:'docena'},{id:'pack',label:'pack'},{id:'caja',label:'caja'}];
-function defaultUnit(cat){
-  if(['lacteos','bebidas'].includes(cat))return 'l';
-  if(['carniceria','pescaderia','fruteria','verduleria'].includes(cat))return 'kg';
-  return 'u';
-}
-
-// ── ESTADO ──────────────────────────────────────────────────────────
-let S={roomCode:null,myName:'',items:[],members:{},history:[],col:{}};
-let myLists=[];
-let fbUnsub=null;
-const ITEM_MAP={};
-
-// ── LOCALSTORAGE ─────────────────────────────────────────────────────
-function saveSession(){
-  if(S.myName)localStorage.setItem('lc_name',S.myName);
+function toast(msg,d=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),d)}
+function setSync(state){const dot=$('#sdot'),txt=$('#slbl');dot.className='sdot '+state;txt.textContent=state==='ok'?'Sincronizado':state==='syncing'?'Actualizando…':'Sin conexión'}
+function saveLocal(){
+  localStorage.setItem('lc_name',S.myName||$('#sname')?.value||'');
   localStorage.setItem('lc_lists',JSON.stringify(myLists));
+  localStorage.setItem('lc_custom_favs',JSON.stringify(customFavs));
+  localStorage.setItem('lc_pending_ops',JSON.stringify(pendingOps.slice(-100)));
+  if(S.roomCode)localStorage.setItem('lc_cache_'+S.roomCode,JSON.stringify({items:S.items,history:S.history,members:S.members,ts:now()}));
 }
-function loadSession(){
-  const name=localStorage.getItem('lc_name')||'';
-  try{myLists=JSON.parse(localStorage.getItem('lc_lists')||'[]');}catch(e){myLists=[];}
-  return name;
+function loadLocal(){
+  try{myLists=JSON.parse(localStorage.getItem('lc_lists')||'[]')}catch{myLists=[]}
+  try{customFavs=JSON.parse(localStorage.getItem('lc_custom_favs')||'[]')}catch{customFavs=[]}
+  try{pendingOps=JSON.parse(localStorage.getItem('lc_pending_ops')||'[]')}catch{pendingOps=[]}
+  $('#sname').value=localStorage.getItem('lc_name')||'';
 }
+function getCachedRoom(code){try{return JSON.parse(localStorage.getItem('lc_cache_'+code)||'null')}catch{return null}}
+function getCat(name){const n=norm(name);return CATS.find(c=>c.id!=='varios'&&c.kw.some(k=>n.includes(norm(k))))?.id||'varios'}
+function defaultUnit(cat){return ['fruteria','verduleria','carniceria','pescaderia'].includes(cat)?'kg':['bebidas','lacteos'].includes(cat)?'l':'u'}
+function emojiFor(name,catId){
+  const n=norm(name);
+  for(const c of CATS)for(const [pn,e] of c.items)if(norm(pn)===n||n.includes(norm(pn))||norm(pn).includes(n))return e;
+  if(n.includes('harina'))return '🧂';
+  if(n.includes('calabacin'))return '🥬';
+  return CATS.find(c=>c.id===(catId||getCat(name)))?.emoji||'🛒';
+}
+function unitLabel(id){return UNITS.find(u=>u[0]===id)?.[1]||id||''}
+function normalizeItems(v){if(Array.isArray(v))return v.filter(Boolean);if(v&&typeof v==='object')return Object.values(v).filter(Boolean);return[]}
+function historyArray(v){if(Array.isArray(v))return v.filter(Boolean);if(v&&typeof v==='object')return Object.values(v).filter(Boolean);return[]}
 
-// ── UTILIDADES ───────────────────────────────────────────────────────
-function toast(msg,d=2600){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),d);}
-function setSS(s){document.getElementById('sdot').className='sdot '+s;document.getElementById('slbl').textContent=s==='ok'?'Sincronizado':s==='syncing'?'Actualizando…':'Sin conexión';}
-function waitFB(cb){if(window._fbReady)cb();else setTimeout(()=>waitFB(cb),80);}
-
-// ── FIREBASE ─────────────────────────────────────────────────────────
-async function pushState(){
-  if(!S.roomCode)return;setSS('syncing');
-  try{await window._fbSet('rooms/'+S.roomCode,{items:S.items,members:S.members,history:S.history||[],updated:Date.now()});setSS('ok');}
-  catch(e){setSS('err');}
-}
-function listenRoom(){
-  if(fbUnsub)fbUnsub();
-  fbUnsub=window._fbListen('rooms/'+S.roomCode,(data)=>{
-    if(!data)return;
-    S.items=data.items||[];S.members=data.members||{};S.history=data.history||[];
-    renderAll();setSS('ok');
-  });
-}
-
-// ── PANTALLA INICIO ──────────────────────────────────────────────────
 function renderSetup(){
-  const name=loadSession();
-  if(name)document.getElementById('sname').value=name;
-  const wrap=document.getElementById('saved-lists-wrap');
-  const container=document.getElementById('saved-lists-container');
-  if(myLists.length>0){
-    wrap.style.display='';
-    container.innerHTML=myLists.map(l=>`
-      <button class="list-item-btn" onclick="enterExistingList('${l.code}')" aria-label="Entrar en ${l.name}">
-        <span class="list-item-icon">🛒</span>
-        <div class="list-item-info">
-          <div class="list-item-name">${l.name}</div>
-          <div class="list-item-code">${l.code}</div>
-        </div>
-        <span class="list-item-arrow">›</span>
-      </button>`).join('');
-  } else {
-    wrap.style.display='none';
-  }
+  const wrap=$('#saved-wrap'),c=$('#saved-lists');wrap.hidden=!myLists.length;
+  c.innerHTML=myLists.map(l=>`<button class="saved-list" type="button" data-enter="${esc(l.code)}"><span aria-hidden="true">🛒</span><span style="flex:1"><strong>${esc(l.name)}</strong><span class="muted">${esc(l.code)}</span></span><span aria-hidden="true">›</span></button>`).join('');
 }
-
-async function enterExistingList(code){
-  const name=document.getElementById('sname').value.trim()||localStorage.getItem('lc_name')||'Yo';
-  S.myName=name;S.roomCode=code;
-  setSS('syncing');
-  waitFB(async()=>{
-    try{
-      const snap=await window._fbGet('rooms/'+code);
-      if(snap.exists()){const d=snap.val();S.items=d.items||[];S.members=d.members||{};S.history=d.history||[];}
-      else{S.items=[];S.members={};S.history=[];}
-      S.members[name]={name,joined:Date.now()};
-      const listName=myLists.find(l=>l.code===code)?.name||'Lista';
-      await pushState();listenRoom();updateSwitcher();enterApp(listName);
-    }catch(e){toast('Error al conectar.');setSS('err');}
+function enterUI(){
+  $('#setup').hidden=true;$('#panels').hidden=false;$('#hdr').hidden=false;$('#addp').hidden=false;
+  $('#hdr-title').textContent=S.listName;$('#bigcode').textContent=S.roomCode;renderAll();setTab('lista');
+}
+function leaveUI(){
+  $('#setup').hidden=false;$('#panels').hidden=true;$('#hdr').hidden=true;$('#addp').hidden=true;renderSetup();
+}
+function setTab(name){
+  ['lista','favs','hist','share'].forEach(n=>{
+    $('#tab-'+n).setAttribute('aria-selected',String(n===name));
+    $('#panel-'+n).hidden=n!==name;
   });
+  $('#pwrap').hidden=name!=='lista';
+  if(name==='favs')renderFavs();if(name==='hist')renderHist();if(name==='share')renderShare();
+  $('#main').focus({preventScroll:true});
 }
-
-async function createRoom(){
-  const name=document.getElementById('sname').value.trim()||'Yo';
-  const listName=prompt('Nombre para esta lista (ej. Mercadona, Farmacia…):')||'Lista principal';
-  S.myName=name;S.roomCode=genCode();S.items=[];S.members={};S.history=[];
-  S.members[name]={name,joined:Date.now()};
-  myLists.push({code:S.roomCode,name:listName,created:Date.now()});
-  waitFB(async()=>{await pushState();listenRoom();saveSession();enterApp(listName);});
-}
-
-async function joinRoom(){
-  const name=document.getElementById('sname').value.trim()||'Yo';
-  const code=document.getElementById('scode').value.trim().toUpperCase();
-  if(code.length<4){toast('Introduce un código de 4 caracteres');return;}
-  setSS('syncing');
-  waitFB(async()=>{
-    try{
-      const snap=await window._fbGet('rooms/'+code);
-      if(!snap.exists()){toast('Sala no encontrada. Comprueba el código.');setSS('err');return;}
-      const d=snap.val();
-      const listName=prompt('Nombre para esta lista:')||'Lista compartida';
-      S.myName=name;S.roomCode=code;S.items=d.items||[];S.members=d.members||{};S.history=d.history||[];
-      S.members[name]={name,joined:Date.now()};
-      if(!myLists.find(l=>l.code===code))myLists.push({code,name:listName,created:Date.now()});
-      await pushState();listenRoom();saveSession();enterApp(listName);
-    }catch(e){toast('Error al conectar.');setSS('err');}
-  });
-}
-
-async function joinFromShare(){
-  const code=(document.getElementById('join-code-share')?.value||document.getElementById('jinp')?.value||'').trim().toUpperCase();
-  if(code.length<4){toast('Introduce un código de 4 caracteres');return;}
-  setSS('syncing');
-  try{
-    const snap=await window._fbGet('rooms/'+code);
-    if(!snap.exists()){toast('Sala no encontrada.');setSS('err');return;}
-    const d=snap.val();
-    if(fbUnsub)fbUnsub();
-    delete S.members[S.myName];
-    const listName=prompt('Nombre para esta lista:')||'Lista compartida';
-    S.roomCode=code;S.items=d.items||[];S.members=d.members||{};S.history=d.history||[];
-    S.members[S.myName]={name:S.myName,joined:Date.now()};
-    if(!myLists.find(l=>l.code===code))myLists.push({code,name:listName,created:Date.now()});
-    await pushState();listenRoom();saveSession();
-    document.getElementById('jinp').value='';
-    const listIdx=myLists.findIndex(l=>l.code===code);
-    document.getElementById('hdr-title').textContent=myLists[listIdx]?.name||'Mi lista';
-    document.getElementById('bigcode').textContent=code;
-    renderAll();toast('✅ Conectado a sala '+code);
-  }catch(e){toast('Error al conectar.');setSS('err');}
-}
-
-function enterApp(listName){
-  document.getElementById('setup').style.display='none';
-  document.getElementById('panels').style.display='';
-  document.getElementById('hdr').style.display='';
-  document.getElementById('addp').style.display='';
-  document.getElementById('hdr-title').textContent=listName||'Mi lista';
-  updateSwitcher();
-  renderAll();toast('✅ Hola, '+S.myName+'!');
-}
-
-async function leaveRoom(){
-  if(fbUnsub)fbUnsub();
-  delete S.members[S.myName];
-  await pushState();
-  S.roomCode=null;S.items=[];S.members={};S.history=[];
-  ['panels','hdr','addp'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('setup').style.display='';
-  setTab('lista');
-  renderSetup();
-}
-
-function genCode(){return Math.random().toString(36).substring(2,6).toUpperCase();}
-
-// ── SHEET ─────────────────────────────────────────────────────────────
-let sheetItemId=null,sheetQty=1,sheetUnit='u',sheetCat='varios',sheetName='';
-
-function openSheet(name,itemId){
-  sheetName=name;sheetItemId=itemId||null;
-  const item=itemId?ITEM_MAP[itemId]:null;
-  sheetCat=item?.cat||getCat(name);
-  sheetUnit=item?.unit||defaultUnit(sheetCat);
-  sheetQty=item?.qty||1;
-  document.getElementById('sheet-emoji').textContent=getE(name);
-  document.getElementById('sheet-title-txt').textContent=(item?'Editar: ':'Añadir: ')+name;
-  document.getElementById('qty-val').value=sheetQty;
-  renderUnitGrid();renderCatGridSheet();
-  document.getElementById('qty-sheet').style.display='';
-}
-function closeSheet(){document.getElementById('qty-sheet').style.display='none';sheetItemId=null;}
-function changeQty(d){
-  let v=parseFloat(document.getElementById('qty-val').value)||1;
-  v=Math.max(0.1,Math.round((v+d)*10)/10);
-  document.getElementById('qty-val').value=v;sheetQty=v;
-}
-function renderUnitGrid(){
-  document.getElementById('unit-grid').innerHTML=UNITS.map(u=>
-    `<button class="unit-btn${sheetUnit===u.id?' active':''}" onclick="selectUnit('${u.id}')">${u.label}</button>`).join('');
-}
-function selectUnit(id){sheetUnit=id;renderUnitGrid();}
-function renderCatGridSheet(){
-  document.getElementById('cat-grid-sheet').innerHTML=CATS.map(c=>
-    `<button class="cat-btn${sheetCat===c.id?' active':''}" onclick="selectCat('${c.id}')">
-      <span>${c.emoji}</span><span style="font-size:.65rem">${c.name}</span>
-    </button>`).join('');
-}
-function selectCat(id){sheetCat=id;renderCatGridSheet();}
-async function confirmSheet(){
-  sheetQty=parseFloat(document.getElementById('qty-val').value)||1;
-  const unitLabel=UNITS.find(u=>u.id===sheetUnit)?.label||'';
-  const qtyStr=sheetQty+' '+unitLabel;
-  if(sheetItemId){
-    S.items=S.items.map(i=>i.id===sheetItemId?{...i,qty:sheetQty,unit:sheetUnit,qtyStr,cat:sheetCat}:i);
-    toast('✅ Editado');
-  } else {
-    S.items.push({id:Date.now()+'',name:sheetName,done:false,cat:sheetCat,qty:sheetQty,unit:sheetUnit,qtyStr,addedBy:S.myName});
-    toast('✅ "'+sheetName+'" añadido');
-  }
-  closeSheet();await pushState();
-}
-
-// ── PRODUCTOS ────────────────────────────────────────────────────────
-async function addItem(){
-  const inp=document.getElementById('ainp');const name=inp.value.trim();if(!name)return;
-  inp.value='';openSheet(name,null);
-}
-async function toggleItem(id){S.items=S.items.map(i=>i.id===id?{...i,done:!i.done}:i);await pushState();}
-async function deleteItem(id){
-  const item=S.items.find(i=>i.id===id);S.items=S.items.filter(i=>i.id!==id);
-  await pushState();if(item)toast('🗑️ "'+item.name+'" eliminado');
-}
-function editItem(id){const item=ITEM_MAP[id]||S.items.find(i=>i.id===id);if(item)openSheet(item.name,item.id);}
-async function toggleFav(name,cat){
-  const ex=S.items.find(i=>i.name===name&&!i.done);
-  if(ex){S.items=S.items.filter(i=>!(i.name===name&&!i.done));await pushState();toast('"'+name+'" quitado');renderFavs();}
-  else{openSheet(name,null);}
-}
-
-// ── FINALIZAR ────────────────────────────────────────────────────────
-function showModal(){document.getElementById('modal-overlay').style.display='';}
-function hideModal(){document.getElementById('modal-overlay').style.display='none';}
-async function finishShopping(){
-  hideModal();
-  const now=new Date();
-  S.history=[{id:Date.now()+'',date:now.toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),time:now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),items:[...S.items],total:S.items.length,closedBy:S.myName},...(S.history||[])].slice(0,20);
-  S.items=[];await pushState();toast('📦 Compra archivada. ¡Lista nueva lista!');setTab('lista');
-}
-async function reutilizarLista(idx){
-  const entry=S.history[idx];if(!entry)return;
-  const prods=entry.items.filter(p=>!S.items.some(e=>e.name===p.name&&!e.done)).map(i=>({...i,id:Date.now()+Math.random()+'',done:false,addedBy:S.myName}));
-  S.items=[...S.items,...prods];await pushState();setTab('lista');
-  toast('✅ Lista anterior cargada ('+prods.length+' productos)');
-}
-
-// ── VOZ ──────────────────────────────────────────────────────────────
-function toggleVoice(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){toast('Tu navegador no soporta voz');return;}
-  if(S.listening){S.rec&&S.rec.stop();return;}
-  const rec=new SR();rec.lang='es-ES';rec.interimResults=false;S.rec=rec;S.listening=false;
-  rec.onstart=()=>{S.listening=true;document.getElementById('bvox').classList.add('on');document.getElementById('vdot').style.display='block';document.getElementById('vtxt').textContent='Escuchando…';document.getElementById('bvox').setAttribute('aria-label','Parar grabación');};
-  rec.onend=()=>{S.listening=false;document.getElementById('bvox').classList.remove('on');document.getElementById('vdot').style.display='none';document.getElementById('vtxt').textContent='🎤 Hablar';document.getElementById('bvox').setAttribute('aria-label','Añadir por voz');};
-  rec.onerror=()=>{rec.onend();toast('No se entendió. Inténtalo de nuevo.');};
-  rec.onresult=e=>{openSheet(e.results[0][0].transcript,null);};
-  rec.start();
-}
-
-// ── TABS ──────────────────────────────────────────────────────────────
-S.tab='lista';
-function setTab(id){
-  S.tab=id;
-  ['lista','favs','hist','share'].forEach(t=>{
-    document.getElementById('tab-'+t).setAttribute('aria-selected',t===id);
-    document.getElementById('panel-'+t).style.display=t===id?'':'none';
-  });
-  document.getElementById('addp').style.display=id==='lista'?'':'none';
-  document.getElementById('pwrap').style.display=id==='lista'?'':'none';
-  document.getElementById('lists-panel').style.display='none';
-  if(id==='favs')renderFavs();
-  if(id==='hist')renderHist();
-  if(id==='share')renderShare();
-}
-
-// ── GESTIÓN DE LISTAS ────────────────────────────────────────────────
-function toggleListsPanel(){
-  const p=document.getElementById('lists-panel');
-  const open=p.style.display==='none'||!p.style.display;
-  p.style.display=open?'':'none';
-  if(open)renderListsPanel();
-}
-
-function renderListsPanel(){
-  document.getElementById('lists-container').innerHTML=myLists.map(l=>`
-    <button onclick="switchToList('${l.code}')" style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;background:${l.code===S.roomCode?'#e6f1fb':'#f8f8f6'};border:1px solid ${l.code===S.roomCode?'#b5d4f4':'#e8e8e6'};border-radius:12px;cursor:pointer;text-align:left;width:100%;min-height:3.5rem;margin-bottom:.4rem" aria-label="Entrar en ${l.name}">
-      <span style="font-size:1.4rem">🛒</span>
-      <div style="flex:1">
-        <div style="font-size:1rem;font-weight:700;color:#1a1a1a">${l.name}</div>
-        <div style="font-size:.75rem;color:#aaa;font-family:monospace;letter-spacing:2px">${l.code}</div>
-      </div>
-      <span style="font-size:1rem;color:#aaa">${l.code===S.roomCode?'✓':'›'}</span>
-    </button>`).join('');
-}
-
-async function switchToList(code){
-  if(code===S.roomCode){toggleListsPanel();return;}
-  if(fbUnsub)fbUnsub();
-  delete S.members[S.myName];await pushState();
-  setSS('syncing');
-  try{
-    const snap=await window._fbGet('rooms/'+code);
-    const d=snap.exists()?snap.val():{items:[],members:{},history:[]};
-    S.roomCode=code;S.items=d.items||[];S.members=d.members||{};S.history=d.history||[];
-    S.members[S.myName]={name:S.myName,joined:Date.now()};
-    await pushState();listenRoom();
-    const listName=myLists.find(l=>l.code===code)?.name||'Lista';
-    document.getElementById('hdr-title').textContent=listName;
-    document.getElementById('switcher-label').textContent=listName;
-    saveSession();renderAll();
-    document.getElementById('lists-panel').style.display='none';
-    toast('✅ '+listName);
-  }catch(e){toast('Error al cambiar de lista.');setSS('err');}
-}
-
-async function createNewList(){
-  const name=prompt('Nombre de la nueva lista (ej. Mercadona, Farmacia…)');
-  if(!name)return;
-  if(fbUnsub)fbUnsub();
-  delete S.members[S.myName];await pushState();
-  const code=genCode();
-  S.roomCode=code;S.items=[];S.history=[];S.members={};
-  S.members[S.myName]={name:S.myName,joined:Date.now()};
-  myLists.push({code,name,created:Date.now()});
-  await pushState();listenRoom();
-  document.getElementById('hdr-title').textContent=name;
-  document.getElementById('switcher-label').textContent=name;
-  const sw=document.getElementById('list-switcher');sw.style.display='flex';
-  saveSession();renderAll();
-  document.getElementById('lists-panel').style.display='none';
-  toast('✅ Lista "'+name+'" creada. Código: '+code);
-}
-
-function goToSetup(){
-  document.getElementById('lists-panel').style.display='none';
-  leaveRoom();
-}
-
-function updateSwitcher(){
-  const sw=document.getElementById('list-switcher');
-  if(myLists.length>=1){
-    sw.style.display='flex';
-    const name=myLists.find(l=>l.code===S.roomCode)?.name||'Lista';
-    document.getElementById('switcher-label').textContent=name;
-  } else {
-    sw.style.display='none';
-  }
-}
-
-// ── EDITAR NOMBRE DE MIEMBRO ─────────────────────────────────────────
-async function renameMember(oldName){
-  const newName=prompt('Nuevo nombre para "'+oldName+'":',oldName);
-  if(!newName||newName===oldName)return;
-  const member=S.members[oldName];
-  if(!member)return;
-  delete S.members[oldName];
-  S.members[newName]={...member,name:newName};
-  // Si es el propio usuario actualizar también S.myName
-  if(oldName===S.myName){
-    S.myName=newName;
-    localStorage.setItem('lc_name',newName);
-  }
-  S.items=S.items.map(i=>({...i,addedBy:i.addedBy===oldName?newName:i.addedBy}));
-  await pushState();
-  toast('✅ Nombre actualizado a "'+newName+'"');
-}
-
-// ── RENDER ────────────────────────────────────────────────────────────
-function renderAll(){renderItems();renderProgress();renderMembers();renderCompleteBanner();
-  document.getElementById('bcode').textContent=S.roomCode||'----';
-  document.getElementById('bigcode').textContent=S.roomCode||'----';
-  renderShareLists();
-}
-function renderCompleteBanner(){const has=S.items.length>0,all=has&&S.items.every(i=>i.done);document.getElementById('cbanner').style.display=all?'':'none';}
-function renderProgress(){
-  const tot=S.items.length,dn=S.items.filter(i=>i.done).length,pct=tot>0?Math.round(dn/tot*100):0,complete=tot>0&&dn===tot;
-  document.getElementById('plbl').textContent=complete?'¡Todo cogido! 🎉':dn+' de '+tot+' productos';
-  const f=document.getElementById('pfill');f.style.width=pct+'%';f.className='prog-fill'+(complete?' complete':'');
-  document.querySelector('.prog-bar').setAttribute('aria-valuenow',pct);
+function renderAll(){renderHeader();renderMembers();renderList();renderFavs();renderHist();renderShare();saveLocal()}
+function renderHeader(){
+  $('#hdr-title').textContent=S.listName||'Mi lista';$('#bigcode').textContent=S.roomCode||'';
+  $('#room-banner').innerHTML=`<div class="roomline"><strong>Lista:</strong><span class="roomcode">${esc(S.roomCode||'')}</span><button class="btn" type="button" data-copy-code>Copiar</button></div>`;
+  const total=S.items.length,done=S.items.filter(i=>i.done).length,pct=total?Math.round(done*100/total):0;
+  $('#plbl').textContent=`${done} de ${total} productos`;
+  $('#pfill').style.width=pct+'%';$('.prog-bar').setAttribute('aria-valuenow',String(pct));
+  $('#complete-banner').hidden=!(total>0&&done===total);
+  renderListsPanel();
 }
 function renderMembers(){
-  document.getElementById('mrow').innerHTML=Object.values(S.members).map(m=>
-    `<div class="mchip" title="${m.name}${m.name===S.myName?' (tú)':''}">
-      <div class="mav${m.name===S.myName?' you':''}" aria-label="${m.name}${m.name===S.myName?' (tú)':''}">${m.name[0].toUpperCase()}</div>
-    </div>`).join('');
+  const entries=Object.entries(S.members||{}).filter(([,m])=>m&&m.name);
+  $('#members-chips').innerHTML=entries.map(([k,m])=>`<span class="avatar ${k===uidKey()?'you':''}" title="${esc(m.name)}" aria-label="${esc(m.name)}">${esc((m.name||'?').trim().charAt(0).toUpperCase())}</span>`).join('');
 }
-function renderItems(){
-  const c=document.getElementById('items-c');
-  const pend=S.items.filter(i=>!i.done),done=S.items.filter(i=>i.done);
-  if(!S.items.length){c.innerHTML='<div class="empty"><div class="empty-icon">🛒</div><p class="empty-t">La lista está vacía</p><p class="empty-s">Escribe un producto arriba o usa Favoritos</p></div>';return;}
-  const grp={};CATS.forEach(ct=>{grp[ct.id]=[];});grp['otros']=[];
-  pend.forEach(i=>{(grp[i.cat||getCat(i.name)]||grp['otros']).push(i);});
+function renderList(){
+  const c=$('#list-content'),active=S.items.filter(i=>!i.done),done=S.items.filter(i=>i.done);
+  if(!S.items.length){c.innerHTML=`<div class="empty"><div class="big" aria-hidden="true">🛒</div><h2>La lista está vacía</h2><p>Añade el primer producto abajo.</p></div>`;return}
+  const by={};active.forEach(i=>(by[i.cat||'varios']??=[]).push(i));
   let html='';
-  CATS.forEach(ct=>{
-    const arr=grp[ct.id];if(!arr||!arr.length)return;
-    const col=S.col[ct.id];
-    html+=`<section class="cat-sec" aria-labelledby="ch-${ct.id}">
-      <button class="cat-hdr" id="ch-${ct.id}" onclick="toggleCat('${ct.id}')" aria-expanded="${!col}" aria-label="${ct.name}, ${arr.length} productos">
-        <span style="font-size:1.25rem">${ct.emoji}</span><span class="cat-ttl">${ct.name}</span>
-        <span class="cat-cnt">${arr.length}</span><span class="cat-chev ${col?'':'open'}">▼</span>
-      </button>
-      ${col?'':`<ul class="ilist" role="list">${arr.map(iHTML).join('')}</ul>`}
-    </section>`;
-  });
-  if(grp['otros']&&grp['otros'].length)html+=`<ul class="ilist" role="list">${grp['otros'].map(iHTML).join('')}</ul>`;
-  if(done.length)html+=`<div style="font-size:.8rem;font-weight:700;color:#aaa;margin:1rem 0 .5rem">✅ Ya cogidos (${done.length})</div><ul class="ilist" role="list">${done.map(iHTML).join('')}</ul>`;
+  for(const cat of CATS){
+    const items=by[cat.id]||[];if(!items.length)continue;
+    const col=!!S.collapsed[cat.id];
+    html+=`<section class="cat"><button type="button" class="cat-toggle" data-cat="${cat.id}" aria-expanded="${!col}"><span aria-hidden="true">${cat.emoji}</span><span>${esc(cat.name)}</span><span class="count">${items.length}</span><span class="chev" aria-hidden="true">${col?'▶':'▼'}</span></button>${col?'':`<ul class="item-list">${items.map(itemHTML).join('')}</ul>`}</section>`;
+  }
+  if(done.length)html+=`<section class="cat"><div class="label">✅ Ya cogidos (${done.length})</div><ul class="item-list">${done.map(itemHTML).join('')}</ul></section>`;
   c.innerHTML=html;
 }
-function iHTML(item){
-  ITEM_MAP[item.id]=item;
-  const who=item.addedBy&&item.addedBy!==S.myName?`<div class="iwho">Añadido por ${item.addedBy}</div>`:'';
-  const qty=item.qtyStr?`<div class="iqty">${item.qtyStr}</div>`:'';
-  return `<li class="icard${item.done?' done':''}" role="listitem">
-    <button class="imain" onclick="toggleItem('${item.id}')" aria-pressed="${item.done}" aria-label="${item.done?'Desmarcar: ':'Marcar cogido: '}${item.name}">
-      <span class="iemoji">${getE(item.name)}</span>
-      <div class="iinfo"><div class="iname">${item.name}</div>${qty}${who}</div>
-      <span class="ichk">${item.done?'✓':''}</span>
-    </button>
-    <div class="iactions">
-      <button class="iedit" onclick="editItem('${item.id}')" aria-label="Editar ${item.name}">✏️</button>
-      <button class="idel" onclick="deleteItem('${item.id}')" aria-label="Eliminar ${item.name}">🗑️</button>
-    </div>
-  </li>`;
+function itemHTML(i){
+  const qty=i.qty?`${i.qty} ${unitLabel(i.unit)}`:(i.qtyStr||'');
+  return `<li class="item ${i.done?'done':''}">
+  <button class="item-main" type="button" data-toggle-item="${esc(i.id)}" aria-pressed="${!!i.done}" aria-label="${i.done?'Desmarcar':'Marcar como cogido'}: ${esc(i.name)}">
+    <span class="item-emoji" aria-hidden="true">${emojiFor(i.name,i.cat)}</span><span style="min-width:0"><span class="item-name">${esc(i.name)}</span>${qty?`<span class="item-meta">${esc(qty)}</span>`:''}${i.addedBy&&i.addedBy!==S.myName?`<span class="item-who">Añadido por ${esc(i.addedBy)}</span>`:''}</span><span class="check" aria-hidden="true">${i.done?'✓':''}</span>
+  </button><span class="actions"><button type="button" data-edit-item="${esc(i.id)}" aria-label="Editar ${esc(i.name)}">✏️</button><button type="button" data-delete-item="${esc(i.id)}" aria-label="Eliminar ${esc(i.name)}">🗑️</button></span></li>`;
+}
+function allFavorites(){
+  const base=[];for(const c of CATS)for(const [n,e] of c.items)base.push({n,e,cat:c.id,custom:false});
+  return [...base,...customFavs.map(f=>({...f,custom:true}))];
+}
+function topUsed(limit=6){
+  const counts={};for(const h of S.history||[])for(const i of h.items||[]){const k=norm(i.name);counts[k]??={name:i.name,count:0,cat:i.cat||getCat(i.name)};counts[k].count++}
+  return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,limit);
+}
+function renderSuggestions(){
+  const top=topUsed();const wrap=$('#smart-suggestions-wrap'),box=$('#smart-suggestions');wrap.hidden=!top.length;
+  box.innerHTML=top.map(x=>`<button type="button" class="suggestion" data-suggest="${esc(x.name)}" data-cat-id="${esc(x.cat)}"><span aria-hidden="true">${emojiFor(x.name,x.cat)}</span>${esc(x.name)}</button>`).join('');
 }
 function renderFavs(){
-  const q=norm(document.getElementById('fav-search')?.value||'');
-  const active=new Set(S.items.filter(i=>!i.done).map(i=>i.name));
-  let html='';
-  CATS.forEach(cat=>{
-    const items=cat.items.filter(i=>!q||norm(i.n).includes(q));
-    if(!items.length)return;
-    html+=`<div class="fav-cat-title"><span>${cat.emoji}</span>${cat.name}</div><div class="favgrid">`;
-    html+=items.map(f=>{const on=active.has(f.n);return `<button class="favc${on?' on':''}" onclick="toggleFav('${f.n.replace(/'/g,"\\'")}','${cat.id}')" aria-pressed="${on}"><span class="favemoji">${f.e}</span><span class="favname">${f.n}</span><span class="favchk">✓</span></button>`;}).join('');
-    html+='</div>';
-  });
-  document.getElementById('favgrid').innerHTML=html||'<p style="color:#aaa;padding:1rem">Sin resultados</p>';
+  const q=norm($('#fav-search')?.value||''),active=new Set(S.items.filter(i=>!i.done).map(i=>norm(i.name)));let html='';
+  const favs=allFavorites();
+  for(const cat of CATS){
+    const arr=favs.filter(f=>f.cat===cat.id&&(!q||norm(f.n).includes(q)));if(!arr.length)continue;
+    html+=`<div class="fav-title"><span aria-hidden="true">${cat.emoji}</span>${esc(cat.name)}</div><div class="favgrid">${arr.map(f=>`<div style="position:relative"><button type="button" class="fav ${active.has(norm(f.n))?'on':''}" data-fav="${esc(f.n)}" data-cat-id="${esc(f.cat)}" aria-pressed="${active.has(norm(f.n))}"><span class="e" aria-hidden="true">${f.e}</span><span class="n">${esc(f.n)}</span></button>${f.custom?`<button class="x" type="button" data-remove-fav="${esc(f.id)}" aria-label="Eliminar favorito ${esc(f.n)}">✕</button>`:''}</div>`).join('')}</div>`;
+  }
+  $('#favgrid').innerHTML=html||'<p class="muted">Sin resultados.</p>';renderSuggestions();
 }
 function renderHist(){
-  const h=S.history||[];
-  if(!h.length){document.getElementById('hist-c').innerHTML='<div class="empty"><div class="empty-icon">📦</div><p class="empty-t">Sin compras archivadas</p><p class="empty-s">Finaliza una compra para verla aquí</p></div>';return;}
-  document.getElementById('hist-c').innerHTML=h.map((e,idx)=>`
-    <div class="hcard">
-      <div class="hcard-hdr"><div><div class="hcard-date">${e.date}</div><div class="hcard-meta">${e.time} · ${e.total} productos · ${e.closedBy}</div></div><span class="hbadge">✅ Completada</span></div>
-      <div class="hitems">${e.items.map(i=>`<span class="hitem">${getE(i.name)} ${i.name}${i.qtyStr?' ('+i.qtyStr+')':''}</span>`).join('')}</div>
-      <button class="btn-reutilizar" onclick="reutilizarLista(${idx})">🔄 Cargar esta lista</button>
-    </div>`).join('');
+  const h=historyArray(S.history).slice(-20).reverse();
+  $('#hist-content').innerHTML=h.length?h.map((e,revIdx)=>`<article class="hcard"><div class="hhead"><div><div class="hdate">${esc(e.date||'Compra')}</div><div class="hmeta">${esc(e.time||'')} · ${(e.items||[]).length} productos · ${esc(e.closedBy||'')}</div></div><span aria-hidden="true">✅</span></div><div class="hitems">${(e.items||[]).map(i=>`<span class="hitem">${emojiFor(i.name,i.cat)} ${esc(i.name)}${i.qty?` (${esc(i.qty+' '+unitLabel(i.unit))})`:''}</span>`).join('')}</div><button class="btn full" type="button" data-reuse="${h.length-1-revIdx}">🔄 Cargar esta lista</button></article>`).join(''):`<div class="empty"><div class="big" aria-hidden="true">📦</div><h2>Sin compras archivadas</h2><p>Cuando finalices una compra aparecerá aquí.</p></div>`;
 }
-async function removeMember(name){
-  if(!confirm('¿Quitar a "'+name+'" de la sala?'))return;
-  delete S.members[name];
-  await pushState();
-  renderShare();
-  toast('"'+name+'" eliminado de la sala');
-}
-async function renameList(code){
-  const list=myLists.find(l=>l.code===code);
-  if(!list)return;
-  const newName=prompt('Nuevo nombre para esta lista:',list.name);
-  if(!newName||newName===list.name)return;
-  list.name=newName;
-  saveSession();
-  if(code===S.roomCode){
-    document.getElementById('hdr-title').textContent=newName;
-    document.getElementById('switcher-label').textContent=newName;
-  }
-  renderListsPanel();
-  renderShareLists();
-  toast('✅ Lista renombrada a "'+newName+'"');
-}
-
-async function deleteList(code){
-  const list=myLists.find(l=>l.code===code);
-  if(!list)return;
-  if(!confirm('¿Eliminar la lista "'+list.name+'"? Se borrará de tus listas guardadas.'))return;
-  myLists=myLists.filter(l=>l.code!==code);
-  saveSession();
-  if(code===S.roomCode){
-    // Switch to another list or go to setup
-    if(myLists.length>0){
-      await switchToList(myLists[0].code);
-    } else {
-      if(fbUnsub)fbUnsub();
-      S.roomCode=null;S.items=[];S.members={};S.history=[];
-      ['panels','hdr','addp'].forEach(id=>document.getElementById(id).style.display='none');
-      document.getElementById('setup').style.display='';
-      renderSetup();
-    }
-  } else {
-    renderShareLists();
-    renderListsPanel();
-  }
-  toast('🗑️ Lista "'+list.name+'" eliminada');
-}
-
-function renderShareLists(){
-  const c=document.getElementById('share-lists-container');
-  if(!c)return;
-  c.innerHTML=myLists.map(l=>`
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.65rem .5rem;border-bottom:1px solid #f0f0ec">
-      <span style="font-size:1.2rem">🛒</span>
-      <div style="flex:1">
-        <div style="font-size:.95rem;font-weight:700;color:${l.code===S.roomCode?'#185fa5':'#1a1a1a'}">${l.name}${l.code===S.roomCode?' ✓':''}</div>
-        <div style="font-size:.7rem;color:#aaa;font-family:monospace;letter-spacing:2px">${l.code}</div>
-      </div>
-      <div style="display:flex;gap:.3rem">
-        <button onclick="renameList('${l.code}')" style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#185fa5;min-height:2rem" aria-label="Renombrar ${l.name}">✏️</button>
-        <button onclick="switchToList('${l.code}')" style="background:#eaf3de;border:1px solid #9fe1cb;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#0f6e56;min-height:2rem" aria-label="Entrar en ${l.name}">→</button>
-        <button onclick="deleteList('${l.code}')" style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#e24b4a;min-height:2rem" aria-label="Eliminar ${l.name}">🗑️</button>
-      </div>
-    </div>`).join('');
-}
-
 function renderShare(){
-  document.getElementById('mfull').innerHTML=Object.values(S.members).map(m=>`
-    <div class="mfrow">
-      <div class="mfav${m.name===S.myName?' you':''}">${m.name[0].toUpperCase()}</div>
-      <div style="flex:1">
-        <div style="font-size:.95rem;font-weight:700">${m.name}</div>
-        ${m.name===S.myName?'<div style="font-size:.75rem;color:#aaa">tú</div>':''}
-      </div>
-      <div style="display:flex;gap:.4rem">
-        <button onclick="renameMember('${m.name.replace(/'/g,"\'")}')" style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#185fa5;min-height:2rem">✏️</button>
-        ${m.name!==S.myName?`<button onclick="removeMember('${m.name.replace(/'/g,"\'")}')" style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#e24b4a;min-height:2rem">✕</button>`:''}
-      </div>
-    </div>`).join('');
-  document.getElementById('bigcode').textContent=S.roomCode||'----';
+  const mem=Object.entries(S.members||{}).filter(([,m])=>m&&m.name);
+  $('#share-members').innerHTML=mem.length?mem.map(([k,m])=>`<div class="member-row"><span class="avatar ${k===uidKey()?'you':''}" aria-hidden="true">${esc(m.name.charAt(0).toUpperCase())}</span><div class="member-info"><strong>${esc(m.name)}</strong>${k===uidKey()?'<div class="muted">Tú</div>':''}</div><button class="mini" type="button" data-rename-member="${esc(k)}" aria-label="Renombrar ${esc(m.name)}">✏️</button>${k===uidKey()?'':`<button class="mini" type="button" data-remove-member="${esc(k)}" aria-label="Quitar ${esc(m.name)}">✕</button>`}</div>`).join(''):'<p class="muted">Sin miembros.</p>';
+  $('#share-lists').innerHTML=myLists.map(l=>`<div class="manage-row"><div class="manage-info"><strong>${esc(l.name)}</strong><div class="muted">${esc(l.code)}${l.code===S.roomCode?' · Actual':''}</div></div><button class="mini" type="button" data-switch="${esc(l.code)}" aria-label="Cambiar a ${esc(l.name)}">↪</button><button class="mini" type="button" data-rename-list="${esc(l.code)}" aria-label="Renombrar ${esc(l.name)}">✏️</button><button class="mini" type="button" data-delete-list="${esc(l.code)}" aria-label="Quitar ${esc(l.name)} de mis listas">🗑️</button></div>`).join('');
 }
-function toggleCat(id){S.col[id]=!S.col[id];renderItems();}
-function copyCode(){navigator.clipboard.writeText(S.roomCode).then(()=>toast('✅ Código copiado: '+S.roomCode)).catch(()=>toast('Código: '+S.roomCode));}
-function shareCode(){window.open('https://wa.me/?text='+encodeURIComponent('¡Únete a mi lista de la compra!\nCódigo: *'+S.roomCode+'*\n'+window.location.href),'_blank');}
+function renderListsPanel(){
+  const p=$('#lists-panel');p.innerHTML=myLists.map(l=>`<button class="saved-list" type="button" data-switch="${esc(l.code)}"><span aria-hidden="true">🛒</span><span style="flex:1"><strong>${esc(l.name)}</strong><span class="muted">${esc(l.code)}</span></span></button>`).join('')||'<p class="muted">No hay otras listas.</p>';
+  $('#list-switcher').textContent=(S.listName||'Lista')+' ▾';
+}
 
-// ── EVENTOS ──────────────────────────────────────────────────────────
-document.querySelectorAll('[role=tab]').forEach(btn=>{
-  btn.addEventListener('click',()=>setTab(btn.id.replace('tab-','')));
-  btn.addEventListener('keydown',e=>{const tabs=['tab-lista','tab-favs','tab-hist','tab-share'],idx=tabs.indexOf(btn.id);if(e.key==='ArrowRight')document.getElementById(tabs[(idx+1)%4]).click();if(e.key==='ArrowLeft')document.getElementById(tabs[(idx+3)%4]).click();});
-});
-document.getElementById('sname').addEventListener('keydown',e=>{if(e.key==='Enter')createRoom();});
-document.getElementById('scode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
-document.getElementById('ainp').addEventListener('keydown',e=>{if(e.key==='Enter')addItem();});
-document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)hideModal();});
-document.getElementById('qty-sheet').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSheet();});
-document.getElementById('qty-val').addEventListener('input',e=>{sheetQty=parseFloat(e.target.value)||1;});
-
-// ── ARRANQUE ─────────────────────────────────────────────────────────
-(function init(){
-  renderSetup();
-  const lastList=myLists.length>0?myLists[myLists.length-1]:null;
-  const lastName=localStorage.getItem('lc_name');
-  if(lastList&&lastName){
-    document.getElementById('sname').value=lastName;
-    waitFB(()=>enterExistingList(lastList.code));
+async function waitFB(){if(window.FB?.ready)return;await new Promise(r=>window.addEventListener('fb-ready',r,{once:true}))}
+async function waitAuthBrief(){if(window.FB?.uid)return;await new Promise(r=>{const t=setTimeout(r,1300);window.addEventListener('fb-auth-ready',()=>{clearTimeout(t);r()},{once:true})})}
+async function roomExists(code){
+  try{const meta=await window.FB.get(`rooms/${code}/meta`);if(meta.exists())return true;const whole=await window.FB.get(`rooms/${code}`);return whole.exists()}catch{return false}
+}
+async function joinMembership(code){
+  const key=uidKey(),member={name:S.myName,joined:now(),lastSeen:now()};
+  await window.FB.set(`rooms/${code}/members/${key}`,member);
+  try{await window.FB.disconnectRemove(`rooms/${code}/presence/${key}`);await window.FB.set(`rooms/${code}/presence/${key}`,{name:S.myName,lastSeen:now()})}catch{}
+}
+async function openRoom(code,listName,joining=false){
+  await waitFB();await waitAuthBrief();
+  S.roomCode=code.toUpperCase();S.listName=listName||myLists.find(l=>l.code===S.roomCode)?.name||'Lista';
+  const cached=getCachedRoom(S.roomCode);if(cached){S.items=normalizeItems(cached.items);S.history=historyArray(cached.history);S.members=cached.members||{}}
+  setSync('syncing');
+  try{
+    if(joining && !(await roomExists(S.roomCode))){toast('Sala no encontrada. Comprueba el código.');setSync('err');return false}
+    await joinMembership(S.roomCode);
+    try{await window.FB.update(`rooms/${S.roomCode}/meta`,{exists:true,updated:now()})}catch{}
+    if(fbUnsub)fbUnsub();
+    fbUnsub=window.FB.listen(`rooms/${S.roomCode}`,(data)=>{
+      if(!data)return;S.items=normalizeItems(data.items);S.members=data.members||{};S.history=historyArray(data.history);renderAll();setSync('ok')
+    });
+    await cleanupInactiveMembers();
+    localStorage.setItem('lc_last_room',S.roomCode);enterUI();saveLocal();flushPending();return true;
+  }catch(e){
+    console.error(e);setSync('err');
+    if(cached){localStorage.setItem('lc_last_room',S.roomCode);enterUI();toast('Sin conexión: mostrando la copia guardada.');return true}
+    toast('No se ha podido conectar a la lista.');return false;
   }
+}
+async function createRoom(){
+  const name=$('#sname').value.trim()||'Yo';const listName=prompt('Nombre para esta lista (por ejemplo, Mercadona o Farmacia):','Lista principal');if(listName===null)return;
+  await waitFB();await waitAuthBrief();S.myName=name;saveLocal();
+  let code;for(let i=0;i<8;i++){code=Math.random().toString(36).slice(2,6).toUpperCase();if(!(await roomExists(code)))break}
+  const key=uidKey();const room={meta:{exists:true,created:now(),updated:now()},items:[],history:[],members:{[key]:{name,joined:now(),lastSeen:now()}}};
+  try{await window.FB.set(`rooms/${code}`,room);if(!myLists.some(l=>l.code===code))myLists.push({code,name:listName||'Lista principal',created:now()});saveLocal();await openRoom(code,listName,false);toast('✅ Lista creada')}catch(e){console.error(e);toast('No se pudo crear la lista.');setSync('err')}
+}
+async function joinRoom(codeArg){
+  const name=$('#sname').value.trim()||localStorage.getItem('lc_name')||'Yo';const code=(codeArg||$('#scode').value).trim().toUpperCase();
+  if(!/^[A-Z0-9]{4}$/.test(code)){toast('Introduce un código de 4 letras o números.');return}
+  const listName=prompt('Nombre con el que quieres guardar esta lista:','Lista compartida');if(listName===null)return;
+  S.myName=name;saveLocal();if(!myLists.some(l=>l.code===code))myLists.push({code,name:listName||'Lista compartida',created:now()});saveLocal();
+  const ok=await openRoom(code,listName,true);if(!ok){myLists=myLists.filter(l=>l.code!==code);saveLocal();renderSetup()}
+}
+async function switchRoom(code){if(code===S.roomCode){$('#lists-panel').hidden=true;return}const l=myLists.find(x=>x.code===code);if(fbUnsub)fbUnsub();await openRoom(code,l?.name||'Lista',true);$('#lists-panel').hidden=true}
+async function enterSaved(code){const l=myLists.find(x=>x.code===code);S.myName=$('#sname').value.trim()||localStorage.getItem('lc_name')||'Yo';saveLocal();await openRoom(code,l?.name||'Lista',true)}
+
+function applyItemOp(items,op){
+  items=normalizeItems(items).map(x=>({...x}));
+  if(op.type==='add')items.push(op.item);
+  if(op.type==='toggle')items=items.map(i=>i.id===op.id?{...i,done:!i.done}:i);
+  if(op.type==='delete')items=items.filter(i=>i.id!==op.id);
+  if(op.type==='edit')items=items.map(i=>i.id===op.item.id?{...i,...op.item}:i);
+  return items;
+}
+function applyLocalOp(op){S.items=applyItemOp(S.items,op);saveLocal();renderAll()}
+async function commitItemOp(op,queueOnFail=true){
+  applyLocalOp(op);if(!S.roomCode)return;
+  setSync('syncing');
+  try{await window.FB.tx(`rooms/${S.roomCode}/items`,current=>applyItemOp(current,op));await window.FB.set(`rooms/${S.roomCode}/meta/updated`,now());setSync('ok')}
+  catch(e){console.warn(e);setSync('err');if(queueOnFail){pendingOps.push({room:S.roomCode,op,ts:now()});saveLocal();toast('Cambio guardado en este dispositivo. Se sincronizará al recuperar conexión.')}}
+}
+async function flushPending(){
+  if(!navigator.onLine||!pendingOps.length)return;
+  const rest=[];for(const p of pendingOps){try{await window.FB.tx(`rooms/${p.room}/items`,cur=>applyItemOp(cur,p.op))}catch{rest.push(p)}}
+  pendingOps=rest;saveLocal();if(!rest.length)setSync('ok');
+}
+async function cleanupInactiveMembers(){
+  if(!S.roomCode)return;try{await window.FB.tx(`rooms/${S.roomCode}/members`,members=>{members=members||{};const t=now();for(const [k,m] of Object.entries(members)){if(k!==uidKey()&&m?.lastSeen&&t-m.lastSeen>INACTIVE_MS)delete members[k]}return members})}catch{}
+}
+async function heartbeat(){if(!S.roomCode)return;try{await window.FB.update(`rooms/${S.roomCode}/members/${uidKey()}`,{name:S.myName,lastSeen:now()})}catch{}}
+
+function openSheet(name,id=null,cat=null){
+  lastFocus=document.activeElement;const item=id?S.items.find(i=>i.id===id):null;currentSheet={id,name:item?.name||name,cat:item?.cat||cat||getCat(name),unit:item?.unit||defaultUnit(cat||getCat(name)),qty:item?.qty||1};
+  $('#sheet-title').textContent=(item?'Editar: ':'Añadir: ')+currentSheet.name;$('#qty').value=currentSheet.qty;renderSheetChoices();
+  const top=topUsed(3).filter(x=>norm(x.name)!==norm(currentSheet.name));$('#sheet-suggestions-wrap').hidden=item||!top.length;$('#sheet-suggestions').innerHTML=top.map(x=>`<button class="suggestion" type="button" data-sheet-suggest="${esc(x.name)}" data-cat-id="${esc(x.cat)}"><span aria-hidden="true">${emojiFor(x.name,x.cat)}</span>${esc(x.name)}</button>`).join('');
+  $('#sheet').hidden=false;$('#sheet').setAttribute('aria-hidden','false');setTimeout(()=>$('#qty').focus(),0)
+}
+function closeSheet(){currentSheet=null;$('#sheet').hidden=true;$('#sheet').setAttribute('aria-hidden','true');lastFocus?.focus?.()}
+function renderSheetChoices(){
+  $('#unit-grid').innerHTML=UNITS.map(([id,label])=>`<button class="choice ${currentSheet.unit===id?'active':''}" type="button" data-unit="${id}" aria-pressed="${currentSheet.unit===id}">${esc(label)}</button>`).join('');
+  $('#cat-grid').innerHTML=CATS.map(c=>`<button class="choice ${currentSheet.cat===c.id?'active':''}" type="button" data-sheet-cat="${c.id}" aria-pressed="${currentSheet.cat===c.id}"><span aria-hidden="true">${c.emoji}</span>${esc(c.name)}</button>`).join('');
+}
+async function confirmSheet(){
+  if(!currentSheet)return;const qty=Math.max(.01,parseFloat($('#qty').value)||1),unit=currentSheet.unit,cat=currentSheet.cat;
+  if(currentSheet.id){await commitItemOp({type:'edit',item:{id:currentSheet.id,name:currentSheet.name,qty,unit,cat,qtyStr:`${qty} ${unitLabel(unit)}`}});toast('✅ Producto actualizado')}
+  else{await commitItemOp({type:'add',item:{id:makeId(),name:currentSheet.name,done:false,cat,qty,unit,qtyStr:`${qty} ${unitLabel(unit)}`,addedBy:S.myName,addedAt:now()}});toast(`✅ ${currentSheet.name} añadido`)}
+  closeSheet();
+}
+function requestFinish(){
+  const unfinished=S.items.filter(i=>!i.done);$('#unfinished-options').hidden=!unfinished.length;
+  $('#finish-text').textContent=unfinished.length?`Quedan ${unfinished.length} productos sin marcar. Elige qué hacer con ellos antes de archivar.`:'La compra se archivará con fecha y hora y la lista quedará vacía.';
+  lastFocus=document.activeElement;$('#finish-dialog').hidden=false;$('#finish-dialog').setAttribute('aria-hidden','false');setTimeout(()=>$('#finish-cancel').focus(),0)
+}
+function closeFinish(){ $('#finish-dialog').hidden=true;$('#finish-dialog').setAttribute('aria-hidden','true');lastFocus?.focus?.()}
+async function finishPurchase(){
+  const choice=document.querySelector('input[name="unfinished"]:checked')?.value||'archive',all=S.items.slice(),done=all.filter(i=>i.done),unfinished=all.filter(i=>!i.done);
+  const archiveItems=choice==='discard'||choice==='keep'?done:all;const keep=choice==='keep'?unfinished.map(i=>({...i,done:false})):[];const d=new Date();
+  const entry={id:makeId(),date:d.toLocaleDateString('es-ES'),time:d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),closedBy:S.myName,items:archiveItems,total:archiveItems.length,closedAt:now()};
+  setSync('syncing');
+  try{
+    await window.FB.tx(`rooms/${S.roomCode}`,room=>{
+      room=room||{};const hist=historyArray(room.history);hist.push(entry);room.history=hist.slice(-20);room.items=keep;room.meta={...(room.meta||{}),exists:true,updated:now()};return room
+    });
+    S.history=[...S.history,entry].slice(-20);S.items=keep;saveLocal();renderAll();closeFinish();toast('✅ Compra archivada')
+  }catch(e){console.error(e);setSync('err');toast('No se pudo archivar. Inténtalo cuando haya conexión.')}
+}
+async function reuseHistory(idx){
+  const h=historyArray(S.history),entry=h[idx];if(!entry)return;
+  for(const old of entry.items||[]){const item={...old,id:makeId(),done:false,addedBy:S.myName,addedAt:now()};await commitItemOp({type:'add',item})}
+  setTab('lista');toast('✅ Lista cargada')
+}
+async function removeMember(key){const m=S.members[key];if(!m||!confirm(`¿Quitar a "${m.name}" de la sala?`))return;try{await window.FB.set(`rooms/${S.roomCode}/members/${key}`,null);toast('Miembro eliminado')}catch{toast('No se pudo eliminar')}}
+async function renameMember(key){const m=S.members[key];if(!m)return;const n=prompt('Nuevo nombre:',m.name);if(!n?.trim())return;try{await window.FB.update(`rooms/${S.roomCode}/members/${key}`,{name:n.trim(),lastSeen:now()});if(key===uidKey()){S.myName=n.trim();localStorage.setItem('lc_name',S.myName)}toast('✅ Nombre actualizado')}catch{toast('No se pudo renombrar')}}
+function renameList(code){const l=myLists.find(x=>x.code===code);if(!l)return;const n=prompt('Nuevo nombre:',l.name);if(!n?.trim())return;l.name=n.trim();if(code===S.roomCode)S.listName=l.name;saveLocal();renderAll()}
+async function deleteList(code){const l=myLists.find(x=>x.code===code);if(!l||!confirm(`¿Quitar "${l.name}" de tus listas guardadas? No se borrarán los datos de la familia.`))return;myLists=myLists.filter(x=>x.code!==code);saveLocal();if(code===S.roomCode){if(myLists.length)await switchRoom(myLists[0].code);else{if(fbUnsub)fbUnsub();S={roomCode:null,myName:S.myName,items:[],members:{},history:[],collapsed:{},listName:'Lista'};leaveUI()}}else renderAll()}
+function addCustomFavorite(){const n=prompt('Nombre del producto favorito:');if(!n?.trim())return;const name=n.trim(),cat=getCat(name);if(allFavorites().some(f=>norm(f.n)===norm(name))){toast('Ese producto ya está en favoritos.');return}customFavs.push({id:makeId(),n:name,e:emojiFor(name,cat),cat});saveLocal();renderFavs();toast('✅ Favorito añadido')}
+function removeCustomFavorite(id){customFavs=customFavs.filter(f=>f.id!==id);saveLocal();renderFavs()}
+function shareWhatsApp(){const text=`Únete a nuestra lista de la compra "${S.listName}". Código: ${S.roomCode}\nhttps://altamira01github.github.io/Lista-de-la-compra/?room=${S.roomCode}`;location.href='https://wa.me/?text='+encodeURIComponent(text)}
+async function copyCode(){try{await navigator.clipboard.writeText(S.roomCode);toast('✅ Código copiado')}catch{prompt('Copia este código:',S.roomCode)}}
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('El dictado por voz no está disponible en este navegador.');return}
+  const r=new SR();r.lang='es-ES';r.interimResults=false;r.maxAlternatives=1;$('#voice-btn').textContent='🎤 Escuchando…';
+  r.onresult=e=>{const n=e.results[0][0].transcript.trim();$('#ainp').value=n;openSheet(n)};r.onerror=()=>toast('No se pudo reconocer la voz.');r.onend=()=>$('#voice-btn').textContent='🎤 Hablar';r.start()
+}
+
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='create-room')createRoom();
+  else if(b.id==='join-room')joinRoom();
+  else if(b.dataset.enter)enterSaved(b.dataset.enter);
+  else if(b.id==='list-switcher')$('#lists-panel').hidden=!$('#lists-panel').hidden;
+  else if(b.dataset.switch)switchRoom(b.dataset.switch);
+  else if(b.dataset.cat){S.collapsed[b.dataset.cat]=!S.collapsed[b.dataset.cat];renderList()}
+  else if(b.dataset.toggleItem)commitItemOp({type:'toggle',id:b.dataset.toggleItem});
+  else if(b.dataset.deleteItem){const i=S.items.find(x=>x.id===b.dataset.deleteItem);if(i&&confirm(`¿Eliminar "${i.name}"?`))commitItemOp({type:'delete',id:i.id})}
+  else if(b.dataset.editItem){const i=S.items.find(x=>x.id===b.dataset.editItem);if(i)openSheet(i.name,i.id,i.cat)}
+  else if(b.dataset.fav!==undefined||b.dataset.suggest!==undefined){const n=b.dataset.fav??b.dataset.suggest;openSheet(n,null,b.dataset.catId)}
+  else if(b.dataset.removeFav)removeCustomFavorite(b.dataset.removeFav);
+  else if(b.dataset.reuse!==undefined)reuseHistory(Number(b.dataset.reuse));
+  else if(b.dataset.renameMember)renameMember(b.dataset.renameMember);
+  else if(b.dataset.removeMember)removeMember(b.dataset.removeMember);
+  else if(b.dataset.renameList)renameList(b.dataset.renameList);
+  else if(b.dataset.deleteList)deleteList(b.dataset.deleteList);
+  else if(b.dataset.copyCode!==undefined||b.id==='copy-code-btn')copyCode();
+  else if(b.id==='whatsapp-btn')shareWhatsApp();
+  else if(b.id==='new-list-share'){$('#lists-panel').hidden=true;const old=$('#sname').value;$('#sname').value=S.myName||old;createRoom()}
+  else if(b.id==='join-list-share'){const c=prompt('Código de 4 caracteres:');if(c)joinRoom(c)}
+  else if(b.id==='add-custom-fav')addCustomFavorite();
+  else if(b.id==='add-item-btn'){const n=$('#ainp').value.trim();if(n){$('#ainp').value='';openSheet(n)}}
+  else if(b.id==='voice-btn')toggleVoice();
+  else if(b.id==='qty-minus'){const q=$('#qty');q.value=Math.max(.1,(parseFloat(q.value)||1)-1)}
+  else if(b.id==='qty-plus'){const q=$('#qty');q.value=(parseFloat(q.value)||1)+1}
+  else if(b.dataset.unit){currentSheet.unit=b.dataset.unit;renderSheetChoices()}
+  else if(b.dataset.sheetCat){currentSheet.cat=b.dataset.sheetCat;renderSheetChoices()}
+  else if(b.dataset.sheetSuggest){currentSheet.name=b.dataset.sheetSuggest;currentSheet.cat=b.dataset.catId;currentSheet.unit=defaultUnit(currentSheet.cat);$('#sheet-title').textContent='Añadir: '+currentSheet.name;renderSheetChoices()}
+  else if(b.id==='sheet-cancel')closeSheet();
+  else if(b.id==='sheet-confirm')confirmSheet();
+  else if(b.id==='finish-btn')requestFinish();
+  else if(b.id==='finish-cancel')closeFinish();
+  else if(b.id==='finish-confirm')finishPurchase();
+  else if(b.id?.startsWith('tab-'))setTab(b.id.replace('tab-',''));
+});
+$('#ainp').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const n=e.currentTarget.value.trim();if(n){e.currentTarget.value='';openSheet(n)}}});
+$('#fav-search').addEventListener('input',renderFavs);
+window.addEventListener('online',()=>{$('#offline-note').hidden=true;setSync('syncing');flushPending();heartbeat()});
+window.addEventListener('offline',()=>{$('#offline-note').hidden=false;setSync('err')});
+setInterval(heartbeat,5*60*1000);
+
+async function migrateSavedRooms(){
+  if(!window.FB?.uid||!myLists.length)return;
+  for(const l of myLists){try{const snap=await window.FB.get(`rooms/${l.code}`);if(!snap.exists())continue;await window.FB.update(`rooms/${l.code}`,{[`members/${window.FB.uid}`]:{name:S.myName||localStorage.getItem('lc_name')||'Yo',joined:now(),lastSeen:now()},'meta/exists':true,'meta/updated':now()})}catch(e){console.warn('Migración pendiente para',l.code,e)}}
+}
+
+(async function init(){
+  loadLocal();renderSetup();$('#offline-note').hidden=navigator.onLine;
+  await waitFB();await waitAuthBrief();
+  S.myName=$('#sname').value.trim()||localStorage.getItem('lc_name')||'Yo';
+  migrateSavedRooms();
+  const params=new URLSearchParams(location.search),room=params.get('room')?.toUpperCase();
+  if(room){$('#scode').value=room}
+  else if(myLists.length){const last=localStorage.getItem('lc_last_room')||myLists[myLists.length-1].code;const l=myLists.find(x=>x.code===last)||myLists[myLists.length-1];S.myName=$('#sname').value.trim()||'Yo';openRoom(l.code,l.name,true)}
 })();
+window.addEventListener('beforeunload',()=>{if(S.roomCode)localStorage.setItem('lc_last_room',S.roomCode);saveLocal()});
 </script>
 </body>
 </html>
