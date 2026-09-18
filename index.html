@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION UI: item-metadata-blocks-2026-09-12 -->
+<!-- VERSION UI: member-dedupe-auth-persistence-2026-09-18 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -202,7 +202,7 @@ main{flex:1;padding:.85rem clamp(.7rem,3vw,1rem) 8rem}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, set, update, onValue, get, runTransaction, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyCtEChAlduFzKXTSnSGbnixydc6EZojJDo",
@@ -228,10 +228,17 @@ window.FB={
 };
 
 try{
-  await signInAnonymously(auth);
+  // Mantener el mismo usuario anónimo entre recargas y reaperturas del navegador.
+  await setPersistence(auth,browserLocalPersistence);
+  if(typeof auth.authStateReady==="function") await auth.authStateReady();
+
+  // Solo crear un usuario anónimo si Firebase NO ha restaurado uno existente.
+  if(!auth.currentUser) await signInAnonymously(auth);
+
+  window.FB.uid=auth.currentUser?.uid||null;
 }catch(e){
-  console.warn("Firebase Anonymous Auth no está habilitado todavía. La app seguirá funcionando mientras las reglas actuales permitan acceso.",e);
-  window.dispatchEvent(new CustomEvent("fb-auth-ready"));
+  console.warn("No se pudo inicializar Firebase Anonymous Auth.",e);
+  window.FB.uid=auth.currentUser?.uid||null;
 }
 onAuthStateChanged(auth,user=>{
   window.FB.uid=user?.uid||null;
@@ -239,6 +246,7 @@ onAuthStateChanged(auth,user=>{
 });
 window.FB.ready=true;
 window.dispatchEvent(new CustomEvent("fb-ready"));
+window.dispatchEvent(new CustomEvent("fb-auth-ready"));
 </script>
 
 <script>
@@ -269,6 +277,18 @@ const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCas
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uidKey=()=>window.FB?.uid||('legacy_'+norm(S.myName).replace(/[^a-z0-9_-]/g,'_'));
 const now=()=>Date.now();
+
+function dedupeMemberEntries(members){
+  const current=uidKey(), byName=new Map();
+  for(const [key,m] of Object.entries(members||{})){
+    if(!m?.name)continue;
+    const nk=norm(m.name)||key;
+    const prev=byName.get(nk);
+    const score=key===current?Number.MAX_SAFE_INTEGER:(Number(m.lastSeen)||Number(m.joined)||0);
+    if(!prev||score>prev.score)byName.set(nk,{key,m,score});
+  }
+  return [...byName.values()].map(({key,m})=>[key,m]);
+}
 const makeId=()=>crypto?.randomUUID?.()||(`${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
 function hideToast(){
@@ -342,7 +362,7 @@ function renderHeader(){
   renderListsPanel();
 }
 function renderMembers(){
-  const entries=Object.entries(S.members||{}).filter(([,m])=>m&&m.name);
+  const entries=dedupeMemberEntries(S.members);
   $('#members-chips').innerHTML=entries.map(([k,m])=>`<span class="avatar ${k===uidKey()?'you':''}" title="${esc(m.name)}" aria-label="${esc(m.name)}">${esc((m.name||'?').trim().charAt(0).toUpperCase())}</span>`).join('');
 }
 function renderList(){
@@ -391,7 +411,7 @@ function renderHist(){
   $('#hist-content').innerHTML=h.length?h.map((e,revIdx)=>`<article class="hcard"><div class="hhead"><div><div class="hdate">${esc(e.date||'Compra')}</div><div class="hmeta">${esc(e.time||'')} · ${(e.items||[]).length} productos · ${esc(e.closedBy||'')}</div></div><span aria-hidden="true">✅</span></div><div class="hitems">${(e.items||[]).map(i=>`<span class="hitem">${emojiFor(i.name,i.cat)} ${esc(i.name)}${i.qty?` (${esc(i.qty+' '+unitLabel(i.unit))})`:''}</span>`).join('')}</div><button class="btn full" type="button" data-reuse="${h.length-1-revIdx}">🔄 Cargar esta lista</button></article>`).join(''):`<div class="empty"><div class="big" aria-hidden="true">📦</div><h2>Sin compras archivadas</h2><p>Cuando finalices una compra aparecerá aquí.</p></div>`;
 }
 function renderShare(){
-  const mem=Object.entries(S.members||{}).filter(([,m])=>m&&m.name);
+  const mem=dedupeMemberEntries(S.members);
   $('#share-members').innerHTML=mem.length?mem.map(([k,m])=>`<div class="member-row"><span class="avatar ${k===uidKey()?'you':''}" aria-hidden="true">${esc(m.name.charAt(0).toUpperCase())}</span><div class="member-info"><strong>${esc(m.name)}</strong>${k===uidKey()?'<div class="muted">Tú</div>':''}</div><button class="mini" type="button" data-rename-member="${esc(k)}" aria-label="Renombrar ${esc(m.name)}">✏️</button>${k===uidKey()?'':`<button class="mini" type="button" data-remove-member="${esc(k)}" aria-label="Quitar ${esc(m.name)}">✕</button>`}</div>`).join(''):'<p class="muted">Sin miembros.</p>';
   $('#share-lists').innerHTML=myLists.map(l=>`<div class="manage-row"><div class="manage-info"><strong>${esc(l.name)}</strong><div class="muted">${esc(l.code)}${l.code===S.roomCode?' · Actual':''}</div></div><button class="mini" type="button" data-switch="${esc(l.code)}" aria-label="Cambiar a ${esc(l.name)}">↪</button><button class="mini" type="button" data-rename-list="${esc(l.code)}" aria-label="Renombrar ${esc(l.name)}">✏️</button><button class="mini" type="button" data-delete-list="${esc(l.code)}" aria-label="Quitar ${esc(l.name)} de mis listas">🗑️</button></div>`).join('');
 }
@@ -408,6 +428,7 @@ async function roomExists(code){
 async function joinMembership(code){
   const key=uidKey(),member={name:S.myName,joined:now(),lastSeen:now()};
   await window.FB.set(`rooms/${code}/members/${key}`,member);
+  await cleanupDuplicateMembers(code);
   try{await window.FB.disconnectRemove(`rooms/${code}/presence/${key}`);await window.FB.set(`rooms/${code}/presence/${key}`,{name:S.myName,lastSeen:now()})}catch{}
 }
 async function openRoom(code,listName,joining=false){
@@ -468,10 +489,67 @@ async function flushPending(){
   const rest=[];for(const p of pendingOps){try{await window.FB.tx(`rooms/${p.room}/items`,cur=>applyItemOp(cur,p.op))}catch{rest.push(p)}}
   pendingOps=rest;saveLocal();if(!rest.length)setSync('ok');
 }
-async function cleanupInactiveMembers(){
-  if(!S.roomCode)return;try{await window.FB.tx(`rooms/${S.roomCode}/members`,members=>{members=members||{};const t=now();for(const [k,m] of Object.entries(members)){if(k!==uidKey()&&m?.lastSeen&&t-m.lastSeen>INACTIVE_MS)delete members[k]}return members})}catch{}
+async function cleanupDuplicateMembers(code=S.roomCode){
+  if(!code)return;
+  try{
+    await window.FB.tx(`rooms/${code}/members`,members=>{
+      members=members||{};
+      const current=uidKey(), keep=new Map();
+
+      // Elegir una sola entrada por nombre. Para la persona actual,
+      // siempre prevalece su UID autenticado estable.
+      for(const [key,m] of Object.entries(members)){
+        if(!m?.name)continue;
+        const nk=norm(m.name)||key;
+        const prev=keep.get(nk);
+        const score=key===current?Number.MAX_SAFE_INTEGER:(Number(m.lastSeen)||Number(m.joined)||0);
+        if(!prev||score>prev.score)keep.set(nk,{key,score});
+      }
+
+      const validKeys=new Set([...keep.values()].map(x=>x.key));
+      for(const key of Object.keys(members)){
+        if(!validKeys.has(key))delete members[key];
+      }
+      return members;
+    });
+  }catch(e){
+    console.warn("No se pudieron limpiar miembros duplicados.",e);
+  }
 }
-async function heartbeat(){if(!S.roomCode)return;try{await window.FB.update(`rooms/${S.roomCode}/members/${uidKey()}`,{name:S.myName,lastSeen:now()})}catch{}}
+async function cleanupInactiveMembers(){
+  if(!S.roomCode)return;
+  try{
+    await window.FB.tx(`rooms/${S.roomCode}/members`,members=>{
+      members=members||{};
+      const t=now(),current=uidKey();
+
+      for(const [k,m] of Object.entries(members)){
+        if(k!==current&&m?.lastSeen&&t-Number(m.lastSeen)>INACTIVE_MS)delete members[k];
+      }
+
+      // También elimina duplicados que puedan proceder de versiones antiguas.
+      const keep=new Map();
+      for(const [key,m] of Object.entries(members)){
+        if(!m?.name)continue;
+        const nk=norm(m.name)||key;
+        const prev=keep.get(nk);
+        const score=key===current?Number.MAX_SAFE_INTEGER:(Number(m.lastSeen)||Number(m.joined)||0);
+        if(!prev||score>prev.score)keep.set(nk,{key,score});
+      }
+      const validKeys=new Set([...keep.values()].map(x=>x.key));
+      for(const key of Object.keys(members)){
+        if(!validKeys.has(key))delete members[key];
+      }
+      return members;
+    });
+  }catch(e){
+    console.warn("No se pudieron limpiar miembros inactivos/duplicados.",e);
+  }
+}
+async function heartbeat(){
+  if(!S.roomCode||!window.FB?.uid)return;
+  try{await window.FB.update(`rooms/${S.roomCode}/members/${uidKey()}`,{name:S.myName,lastSeen:now()})}catch{}
+}
 
 function openSheet(name,id=null,cat=null){
   lastFocus=document.activeElement;const item=id?S.items.find(i=>i.id===id):null;currentSheet={id,name:item?.name||name,cat:item?.cat||cat||getCat(name),unit:item?.unit||defaultUnit(cat||getCat(name)),qty:item?.qty||1};
@@ -581,7 +659,20 @@ setInterval(heartbeat,5*60*1000);
 
 async function migrateSavedRooms(){
   if(!window.FB?.uid||!myLists.length)return;
-  for(const l of myLists){try{const snap=await window.FB.get(`rooms/${l.code}`);if(!snap.exists())continue;await window.FB.update(`rooms/${l.code}`,{[`members/${window.FB.uid}`]:{name:S.myName||localStorage.getItem('lc_name')||'Yo',joined:now(),lastSeen:now()},'meta/exists':true,'meta/updated':now()})}catch(e){console.warn('Migración pendiente para',l.code,e)}}
+  for(const l of myLists){
+    try{
+      const meta=await window.FB.get(`rooms/${l.code}/meta`);
+      if(!meta.exists())continue;
+      await window.FB.set(`rooms/${l.code}/members/${window.FB.uid}`,{
+        name:S.myName||localStorage.getItem('lc_name')||'Yo',
+        joined:now(),
+        lastSeen:now()
+      });
+      await cleanupDuplicateMembers(l.code);
+    }catch(e){
+      console.warn('Migración pendiente para',l.code,e);
+    }
+  }
 }
 
 (async function init(){
