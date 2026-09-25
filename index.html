@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION UI: stable-member-id-and-uniform-favorite-icons-2026-09-18 -->
+<!-- VERSION UI: firebase-auth-member-key-fix-2026-09-25 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -275,21 +275,13 @@ let myLists=[], customFavs=[], fbUnsub=null, currentSheet=null, lastFocus=null, 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function getDeviceMemberId(){
-  let id=localStorage.getItem('lc_member_id');
-  if(!id){
-    id='m_'+(crypto?.randomUUID?.()||(`${Date.now()}_${Math.random().toString(36).slice(2)}`)).replace(/[^a-zA-Z0-9_-]/g,'');
-    localStorage.setItem('lc_member_id',id);
-  }
-  return id;
-}
-const uidKey=()=>getDeviceMemberId();
+const uidKey=()=>window.FB?.uid||null;
 const now=()=>Date.now();
 
 function dedupeMemberEntries(members){
   const current=uidKey(), byName=new Map();
   for(const [key,m] of Object.entries(members||{})){
-    if(!m?.name || m.aliasOf)continue;
+    if(!m?.name)continue;
     const nk=(norm(m.name).replace(/[^a-z0-9]/g,'')||key);
     const prev=byName.get(nk);
     const score=key===current?Number.MAX_SAFE_INTEGER:(Number(m.lastSeen)||Number(m.joined)||0);
@@ -312,7 +304,15 @@ function toast(msg,d=2600){
   requestAnimationFrame(()=>t.classList.add('show'));
   t._t=setTimeout(hideToast,d);
 }
-function setSync(state){const dot=$('#sdot'),txt=$('#slbl');dot.className='sdot '+state;txt.textContent=state==='ok'?'Sincronizado':state==='syncing'?'Actualizando…':'Sin conexión'}
+function setSync(state){
+  const dot=$('#sdot'),txt=$('#slbl');
+  dot.className='sdot '+state;
+  txt.textContent=state==='ok'
+    ?'Sincronizado'
+    :state==='syncing'
+      ?'Actualizando…'
+      :(navigator.onLine?'Error de sincronización':'Sin conexión');
+}
 function saveLocal(){
   localStorage.setItem('lc_name',S.myName||$('#sname')?.value||'');
   localStorage.setItem('lc_lists',JSON.stringify(myLists));
@@ -442,38 +442,24 @@ async function roomExists(code){
   try{const meta=await window.FB.get(`rooms/${code}/meta`);if(meta.exists())return true;const whole=await window.FB.get(`rooms/${code}`);return whole.exists()}catch{return false}
 }
 async function joinMembership(code){
-  const key=uidKey(),member={name:S.myName.trim(),joined:now(),lastSeen:now()};
-  // Escribimos siempre con un identificador estable propio de la app.
+  const key=window.FB?.uid;
+  if(!key)throw new Error("Firebase Authentication todavía no está disponible.");
+
+  const member={name:S.myName.trim(),joined:now(),lastSeen:now()};
+
+  // IMPORTANTE: las reglas de Firebase permiten incorporarse a una sala
+  // escribiendo primero members/{auth.uid}. Por eso el UID de Firebase
+  // debe ser siempre la clave real del miembro.
   await window.FB.set(`rooms/${code}/members/${key}`,member);
 
-  // Alias técnico para las reglas de seguridad actuales. No se muestra como miembro.
-  const authUid=window.FB?.uid;
-  if(authUid && authUid!==key){
-    try{
-      await window.FB.set(`rooms/${code}/members/${authUid}`,{
-        name:S.myName.trim(),
-        joined:member.joined,
-        lastSeen:member.lastSeen,
-        aliasOf:key
-      });
-    }catch(e){console.warn("No se pudo crear alias técnico de miembro.",e)}
-  }
-
-  // Si una versión anterior dejó una entrada con el UID anónimo de Firebase,
-  // intentamos retirarla para no conservar dos identidades del mismo dispositivo.
-  const firebaseUid=window.FB?.uid;
-  if(firebaseUid && firebaseUid!==key){
-    try{
-      const oldSnap=await window.FB.get(`rooms/${code}/members/${firebaseUid}`);
-      const old=oldSnap.val();
-      if(old?.name && !old.aliasOf && norm(old.name)===norm(S.myName)){
-        await window.FB.set(`rooms/${code}/members/${firebaseUid}`,null);
-      }
-    }catch(e){console.warn("No se pudo retirar la identidad antigua de Firebase.",e)}
-  }
-
+  // Una vez somos miembros válidos, ya podemos limpiar registros antiguos
+  // de la misma persona sin impedir el acceso a la sala.
   await cleanupDuplicateMembers(code);
-  try{await window.FB.disconnectRemove(`rooms/${code}/presence/${key}`);await window.FB.set(`rooms/${code}/presence/${key}`,{name:S.myName,lastSeen:now()})}catch{}
+
+  try{
+    await window.FB.disconnectRemove(`rooms/${code}/presence/${key}`);
+    await window.FB.set(`rooms/${code}/presence/${key}`,{name:S.myName,lastSeen:now()});
+  }catch{}
 }
 async function openRoom(code,listName,joining=false){
   await waitFB();await waitAuthBrief();
@@ -500,7 +486,7 @@ async function createRoom(){
   const name=$('#sname').value.trim()||'Yo';const listName=prompt('Nombre para esta lista (por ejemplo, Mercadona o Farmacia):','Lista principal');if(listName===null)return;
   await waitFB();await waitAuthBrief();S.myName=name;saveLocal();
   let code;for(let i=0;i<8;i++){code=Math.random().toString(36).slice(2,6).toUpperCase();if(!(await roomExists(code)))break}
-  const key=uidKey();const room={meta:{exists:true,created:now(),updated:now()},items:[],history:[],members:{[key]:{name,joined:now(),lastSeen:now()}}};
+  const key=window.FB?.uid;if(!key){toast('No se pudo iniciar la sesión de Firebase. Recarga la página.');return}const room={meta:{exists:true,created:now(),updated:now()},items:[],history:[],members:{[key]:{name,joined:now(),lastSeen:now()}}};
   try{await window.FB.set(`rooms/${code}`,room);if(!myLists.some(l=>l.code===code))myLists.push({code,name:listName||'Lista principal',created:now()});saveLocal();await openRoom(code,listName,false);toast('✅ Lista creada')}catch(e){console.error(e);toast('No se pudo crear la lista.');setSync('err')}
 }
 async function joinRoom(codeArg){
@@ -534,25 +520,29 @@ async function flushPending(){
   pendingOps=rest;saveLocal();if(!rest.length)setSync('ok');
 }
 async function cleanupDuplicateMembers(code=S.roomCode){
-  if(!code)return;
+  if(!code||!window.FB?.uid)return;
   try{
     await window.FB.tx(`rooms/${code}/members`,members=>{
       members=members||{};
-      const current=uidKey(), keep=new Map();
+      const current=window.FB.uid;
+      const keep=new Map();
 
-      // Elegir una sola entrada por nombre. Para la persona actual,
-      // siempre prevalece su UID autenticado estable.
+      // Una única entrada visual/real por nombre normalizado.
+      // Si una de ellas es el UID autenticado actual, esa prevalece.
       for(const [key,m] of Object.entries(members)){
-        if(!m?.name || m.aliasOf)continue;
+        if(!m?.name)continue;
         const nk=(norm(m.name).replace(/[^a-z0-9]/g,'')||key);
         const prev=keep.get(nk);
-        const score=key===current?Number.MAX_SAFE_INTEGER:(Number(m.lastSeen)||Number(m.joined)||0);
+        const score=
+          key===current
+            ? Number.MAX_SAFE_INTEGER
+            : (Number(m.lastSeen)||Number(m.joined)||0);
+
         if(!prev||score>prev.score)keep.set(nk,{key,score});
       }
 
       const validKeys=new Set([...keep.values()].map(x=>x.key));
-      for(const [key,m] of Object.entries(members)){
-        if(m?.aliasOf)continue;
+      for(const key of Object.keys(members)){
         if(!validKeys.has(key))delete members[key];
       }
       return members;
@@ -562,28 +552,30 @@ async function cleanupDuplicateMembers(code=S.roomCode){
   }
 }
 async function cleanupInactiveMembers(){
-  if(!S.roomCode)return;
+  if(!S.roomCode||!window.FB?.uid)return;
   try{
     await window.FB.tx(`rooms/${S.roomCode}/members`,members=>{
       members=members||{};
-      const t=now(),current=uidKey();
+      const t=now(),current=window.FB.uid;
 
       for(const [k,m] of Object.entries(members)){
         if(k!==current&&m?.lastSeen&&t-Number(m.lastSeen)>INACTIVE_MS)delete members[k];
       }
 
-      // También elimina duplicados que puedan proceder de versiones antiguas.
       const keep=new Map();
       for(const [key,m] of Object.entries(members)){
-        if(!m?.name || m.aliasOf)continue;
+        if(!m?.name)continue;
         const nk=(norm(m.name).replace(/[^a-z0-9]/g,'')||key);
         const prev=keep.get(nk);
-        const score=key===current?Number.MAX_SAFE_INTEGER:(Number(m.lastSeen)||Number(m.joined)||0);
+        const score=
+          key===current
+            ? Number.MAX_SAFE_INTEGER
+            : (Number(m.lastSeen)||Number(m.joined)||0);
         if(!prev||score>prev.score)keep.set(nk,{key,score});
       }
+
       const validKeys=new Set([...keep.values()].map(x=>x.key));
-      for(const [key,m] of Object.entries(members)){
-        if(m?.aliasOf)continue;
+      for(const key of Object.keys(members)){
         if(!validKeys.has(key))delete members[key];
       }
       return members;
@@ -594,7 +586,12 @@ async function cleanupInactiveMembers(){
 }
 async function heartbeat(){
   if(!S.roomCode||!window.FB?.uid)return;
-  try{await window.FB.update(`rooms/${S.roomCode}/members/${uidKey()}`,{name:S.myName,lastSeen:now()})}catch{}
+  try{
+    await window.FB.update(`rooms/${S.roomCode}/members/${window.FB.uid}`,{
+      name:S.myName,
+      lastSeen:now()
+    });
+  }catch{}
 }
 
 function openSheet(name,id=null,cat=null){
@@ -709,7 +706,7 @@ async function migrateSavedRooms(){
     try{
       const meta=await window.FB.get(`rooms/${l.code}/meta`);
       if(!meta.exists())continue;
-      await window.FB.set(`rooms/${l.code}/members/${uidKey()}`,{
+      await window.FB.set(`rooms/${l.code}/members/${window.FB.uid}`,{
         name:(S.myName||localStorage.getItem('lc_name')||'Yo').trim(),
         joined:now(),
         lastSeen:now()
