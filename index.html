@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION UI: improved-color-emojis-v1-2026-10-11 -->
+<!-- VERSION UI: integrated-photo-flow-and-supabase-keepalive-2026-11-13 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -68,6 +68,13 @@ main{flex:1;padding:.85rem clamp(.7rem,3vw,1rem) 8rem}
 .addp{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#fff;border-top:1px solid var(--line);padding:.65rem max(.7rem,env(safe-area-inset-right)) calc(.65rem + env(safe-area-inset-bottom)) max(.7rem,env(safe-area-inset-left));box-shadow:0 -2px 12px rgba(0,0,0,.08)}.addp-inner{width:min(100%,42rem);margin:auto}.addrow{display:flex;gap:.45rem}.addrow .input{flex:1}.addbtn{width:3.2rem;flex:none;font-size:1.5rem}.voice{width:100%;margin-top:.4rem}
 .sheet{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.48);display:flex;align-items:flex-end;justify-content:center}.sheet-inner{width:min(100%,42rem);max-height:92vh;overflow:auto;background:#fff;border-radius:1.1rem 1.1rem 0 0;padding:1rem 1rem calc(1rem + env(safe-area-inset-bottom))}.sheet h2{font-size:1.15rem;margin:.2rem 0 .8rem}.qtyrow{display:grid;grid-template-columns:3.1rem minmax(0,1fr) 3.1rem;gap:.45rem;align-items:center}.qtybtn{width:3.1rem;height:3.1rem;border-radius:50%;border:1px solid var(--line);background:#f2f2ef;font-size:1.4rem}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem}.choice{border:1px solid var(--line);background:#fff;border-radius:.65rem;min-height:3.1rem;padding:.35rem .2rem;font-size:.78rem;color:var(--text)}.choice.active{background:var(--blue-soft);border-color:#78b7e7;color:#124a73;font-weight:850}.gridcats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem}.gridcats .choice{min-height:4.2rem}.gridcats .choice span{display:block;font-size:1.25rem}
 .dialog-actions{display:flex;gap:.5rem;margin-top:1rem}.dialog-actions .btn{flex:1}
+.sheet-photo-box{margin:.8rem 0;padding:.75rem;border:1px solid var(--line);border-radius:.8rem;background:#fafaf8}
+.sheet-photo-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.55rem}
+.sheet-photo-preview{width:100%;max-height:13rem;object-fit:contain;border-radius:.7rem;background:#f0f0ec;border:1px solid var(--line);margin-bottom:.55rem}
+.sheet-photo-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem}
+.sheet-photo-actions .btn{padding:.55rem .35rem;font-size:.84rem}
+.sheet-photo-remove{margin-top:.4rem}
+@media (max-width:24rem){.sheet-photo-actions{grid-template-columns:1fr}.sheet-photo-actions .btn{width:100%}}
 #toast{position:fixed;z-index:500;left:50%;bottom:6.7rem;transform:translate(-50%,7rem);max-width:min(90vw,34rem);background:#1f1f1f;color:#fff;padding:.7rem 1rem;border-radius:.7rem;box-shadow:0 4px 18px rgba(0,0,0,.25);transition:transform .2s,opacity .2s;pointer-events:auto;text-align:center;font-weight:700;opacity:0;cursor:pointer}#toast.show{transform:translate(-50%,0);opacity:1}
 .offline-note{background:var(--orange-soft);border:1px solid #edcf92;color:#714600;border-radius:.7rem;padding:.55rem .7rem;margin-bottom:.7rem;font-size:.85rem}
 @media (max-width:24rem){.tabs button{font-size:.72rem}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.gridcats{grid-template-columns:repeat(2,minmax(0,1fr))}.suggestions{grid-template-columns:repeat(2,minmax(0,1fr))}.actions button{width:2.9rem}}
@@ -175,6 +182,21 @@ main{flex:1;padding:.85rem clamp(.7rem,3vw,1rem) 8rem}
   <div class="sheet-inner" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <h2 id="sheet-title">Añadir producto</h2>
     <div id="sheet-suggestions-wrap" hidden><div class="label">Añades a menudo</div><div id="sheet-suggestions" class="suggestions"></div></div>
+
+    <div class="sheet-photo-box">
+      <div class="sheet-photo-head">
+        <span class="label" style="margin:0">Imagen del producto <span class="muted">(opcional)</span></span>
+        <span id="sheet-photo-status" class="muted"></span>
+      </div>
+      <img id="sheet-photo-preview" class="sheet-photo-preview" alt="" hidden>
+      <div class="sheet-photo-actions" aria-label="Opciones para añadir imagen">
+        <button id="sheet-photo-camera" class="btn" type="button">📷 Cámara</button>
+        <button id="sheet-photo-gallery" class="btn" type="button">🖼️ Fotos</button>
+        <button id="sheet-photo-paste" class="btn" type="button">📋 Pegar imagen</button>
+      </div>
+      <button id="sheet-photo-remove" class="btn danger full sheet-photo-remove" type="button" hidden>Quitar imagen</button>
+    </div>
+
     <label class="label" for="qty">Cantidad</label>
     <div class="qtyrow"><button class="qtybtn" id="qty-minus" type="button" aria-label="Reducir cantidad">−</button><input class="input" id="qty" type="number" min="0.1" step="any" value="1" inputmode="decimal"><button class="qtybtn" id="qty-plus" type="button" aria-label="Aumentar cantidad">+</button></div>
     <div class="label" style="margin-top:.8rem">Unidad</div><div id="unit-grid" class="grid4"></div>
@@ -197,7 +219,8 @@ main{flex:1;padding:.85rem clamp(.7rem,3vw,1rem) 8rem}
   </div>
 </div>
 
-<input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
+<input id="photo-camera-input" type="file" accept="image/*" capture="environment" hidden>
+<input id="photo-gallery-input" type="file" accept="image/*" hidden>
 <div id="photo-dialog" class="sheet" hidden aria-hidden="true">
   <div class="sheet-inner" role="dialog" aria-modal="true" aria-labelledby="photo-title">
     <h2 id="photo-title">Foto del producto</h2>
@@ -247,6 +270,16 @@ window.SB={
     if(!path)return;
     const {error}=await supabase.storage.from(SUPABASE_BUCKET).remove([path]);
     if(error)throw error;
+  },
+  keepAlive:async()=>{
+    // Una consulta mínima al índice de Storage. No descarga imágenes.
+    const {error}=await supabase.storage.from(SUPABASE_BUCKET).list('',{
+      limit:1,
+      offset:0,
+      sortBy:{column:'name',order:'asc'}
+    });
+    if(error)throw error;
+    return true;
   }
 };
 
@@ -306,6 +339,9 @@ const INACTIVE_MS=24*60*60*1000;
 let S={roomCode:null,myName:'',items:[],members:{},history:[],collapsed:{},listName:'Lista'};
 let myLists=[], customFavs=[], fbUnsub=null, currentSheet=null, lastFocus=null, pendingOps=[];
 let photoTargetItemId=null, photoDialogItemId=null;
+let sheetPendingPhoto=null;
+let sheetPendingPhotoUrl=null;
+let sheetRemoveExistingPhoto=false;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -539,9 +575,107 @@ async function compressImageFile(file){
 }
 function safeStoragePart(v){return String(v||'').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,120)}
 function imagePathForItem(itemId,ext='webp'){return `${safeStoragePart(S.roomCode)}/${safeStoragePart(itemId)}/${Date.now()}.${ext}`}
-async function choosePhotoForItem(itemId){
+
+function revokeSheetPhotoUrl(){
+  if(sheetPendingPhotoUrl){
+    URL.revokeObjectURL(sheetPendingPhotoUrl);
+    sheetPendingPhotoUrl=null;
+  }
+}
+function resetSheetPhotoState(){
+  revokeSheetPhotoUrl();
+  sheetPendingPhoto=null;
+  sheetRemoveExistingPhoto=false;
+  const p=$('#sheet-photo-preview');
+  if(p){p.hidden=true;p.removeAttribute('src');p.alt=''}
+  const s=$('#sheet-photo-status');if(s)s.textContent='';
+  const r=$('#sheet-photo-remove');if(r)r.hidden=true;
+}
+function showSheetPhotoFromUrl(url,alt='Vista previa de la imagen del producto'){
+  const p=$('#sheet-photo-preview');
+  if(!p)return;
+  p.src=url;p.alt=alt;p.hidden=false;
+  $('#sheet-photo-remove').hidden=false;
+}
+function setPendingSheetPhoto(fileOrBlob,name='imagen'){
+  if(!fileOrBlob)return;
+  if(fileOrBlob.type && !fileOrBlob.type.startsWith('image/')){
+    toast('El contenido seleccionado no es una imagen.');
+    return;
+  }
+  revokeSheetPhotoUrl();
+  const file=fileOrBlob instanceof File
+    ? fileOrBlob
+    : new File([fileOrBlob],`${name}.png`,{type:fileOrBlob.type||'image/png'});
+  sheetPendingPhoto=file;
+  sheetRemoveExistingPhoto=false;
+  sheetPendingPhotoUrl=URL.createObjectURL(file);
+  showSheetPhotoFromUrl(sheetPendingPhotoUrl,'Vista previa de la imagen seleccionada');
+  $('#sheet-photo-status').textContent='Imagen preparada';
+}
+async function pasteImageIntoSheet(){
+  if(!navigator.clipboard?.read){
+    toast('Este navegador no permite leer imágenes del portapapeles. Usa Cámara o Fotos.');
+    return;
+  }
+  try{
+    const items=await navigator.clipboard.read();
+    for(const item of items){
+      const type=item.types.find(t=>t.startsWith('image/'));
+      if(type){
+        const blob=await item.getType(type);
+        setPendingSheetPhoto(blob,'imagen-pegada');
+        toast('✅ Imagen pegada');
+        return;
+      }
+    }
+    toast('No hay una imagen copiada en el portapapeles.');
+  }catch(e){
+    console.warn(e);
+    toast('No se pudo acceder al portapapeles. Usa Cámara o Fotos.');
+  }
+}
+function removePhotoFromSheet(){
+  revokeSheetPhotoUrl();
+  sheetPendingPhoto=null;
+  sheetRemoveExistingPhoto=true;
+  const p=$('#sheet-photo-preview');
+  p.hidden=true;p.removeAttribute('src');p.alt='';
+  $('#sheet-photo-status').textContent='Sin imagen';
+  $('#sheet-photo-remove').hidden=true;
+}
+async function uploadPhotoForItem(itemId,file,oldPath=null){
+  const c=await compressImageFile(file);
+  const path=imagePathForItem(itemId,c.ext);
+  const url=await window.SB.uploadImage(path,c.blob,c.type);
+
+  await commitItemOp({
+    type:'edit',
+    item:{
+      id:itemId,
+      image:{
+        url,
+        path,
+        uploadedBy:S.myName,
+        uploadedAt:now(),
+        width:c.width,
+        height:c.height
+      }
+    }
+  },false);
+
+  if(oldPath&&oldPath!==path){
+    try{await window.SB.deleteImage(oldPath)}catch(e){console.warn('No se pudo borrar la foto anterior.',e)}
+  }
+  return {url,path};
+}
+
+async function choosePhotoForItem(itemId,source='gallery'){
   if(!S.items.find(i=>i.id===itemId))return;
-  photoTargetItemId=itemId;const input=$('#photo-input');input.value='';input.click();
+  photoTargetItemId=itemId;
+  const input=source==='camera'?$('#photo-camera-input'):$('#photo-gallery-input');
+  input.value='';
+  input.click();
 }
 async function uploadSelectedPhoto(file){
   const item=S.items.find(i=>i.id===photoTargetItemId);if(!item||!file)return;
@@ -568,6 +702,22 @@ async function deletePhotoForItem(itemId){
   const oldPath=item.image.path;
   try{await commitItemOp({type:'edit',item:{id:item.id,image:null}},false);if(oldPath)await window.SB.deleteImage(oldPath);closePhotoDialog();toast('Foto eliminada')}
   catch(e){console.error(e);toast('No se pudo eliminar la foto.')}
+}
+
+
+async function supabaseKeepAlive(){
+  const key='lc_supabase_keepalive_ts';
+  const last=Number(localStorage.getItem(key)||0);
+  const DAY=24*60*60*1000;
+  if(Date.now()-last<DAY)return;
+
+  try{
+    await window.SB.keepAlive();
+    localStorage.setItem(key,String(Date.now()));
+  }catch(e){
+    // No bloquea la app: si Supabase está pausado o inaccesible, Firebase sigue funcionando.
+    console.warn('Keep-alive de Supabase no disponible.',e);
+  }
 }
 
 function renderSetup(){
@@ -817,21 +967,123 @@ async function heartbeat(){
 }
 
 function openSheet(name,id=null,cat=null){
-  lastFocus=document.activeElement;const item=id?S.items.find(i=>i.id===id):null;currentSheet={id,name:item?.name||name,cat:item?.cat||cat||getCat(name),unit:item?.unit||defaultUnit(cat||getCat(name)),qty:item?.qty||1};
-  $('#sheet-title').textContent=(item?'Editar: ':'Añadir: ')+currentSheet.name;$('#qty').value=currentSheet.qty;renderSheetChoices();
-  const top=topUsed(3).filter(x=>norm(x.name)!==norm(currentSheet.name));$('#sheet-suggestions-wrap').hidden=item||!top.length;$('#sheet-suggestions').innerHTML=top.map(x=>`<button class="suggestion" type="button" data-sheet-suggest="${esc(x.name)}" data-cat-id="${esc(x.cat)}"><span aria-hidden="true">${emojiFor(x.name,x.cat)}</span>${esc(x.name)}</button>`).join('');
-  $('#sheet').hidden=false;$('#sheet').setAttribute('aria-hidden','false');setTimeout(()=>$('#qty').focus(),0)
+  lastFocus=document.activeElement;
+  const item=id?S.items.find(i=>i.id===id):null;
+  currentSheet={
+    id,
+    name:item?.name||name,
+    cat:item?.cat||cat||getCat(name),
+    unit:item?.unit||defaultUnit(cat||getCat(name)),
+    qty:item?.qty||1
+  };
+
+  resetSheetPhotoState();
+  if(item?.image?.url){
+    showSheetPhotoFromUrl(item.image.url,`Foto actual de ${item.name}`);
+    $('#sheet-photo-status').textContent='Foto actual';
+  }
+
+  $('#sheet-title').textContent=(item?'Editar: ':'Añadir: ')+currentSheet.name;
+  $('#qty').value=currentSheet.qty;
+  renderSheetChoices();
+
+  const top=topUsed(3).filter(x=>norm(x.name)!==norm(currentSheet.name));
+  $('#sheet-suggestions-wrap').hidden=item||!top.length;
+  $('#sheet-suggestions').innerHTML=top.map(x=>`<button class="suggestion" type="button" data-sheet-suggest="${esc(x.name)}" data-cat-id="${esc(x.cat)}"><span aria-hidden="true">${emojiFor(x.name,x.cat)}</span>${esc(x.name)}</button>`).join('');
+
+  $('#sheet').hidden=false;
+  $('#sheet').setAttribute('aria-hidden','false');
+  setTimeout(()=>$('#qty').focus(),0);
 }
-function closeSheet(){currentSheet=null;$('#sheet').hidden=true;$('#sheet').setAttribute('aria-hidden','true');lastFocus?.focus?.()}
+function closeSheet(){
+  currentSheet=null;
+  resetSheetPhotoState();
+  $('#sheet').hidden=true;
+  $('#sheet').setAttribute('aria-hidden','true');
+  lastFocus?.focus?.();
+}
 function renderSheetChoices(){
   $('#unit-grid').innerHTML=UNITS.map(([id,label])=>`<button class="choice ${currentSheet.unit===id?'active':''}" type="button" data-unit="${id}" aria-pressed="${currentSheet.unit===id}">${esc(label)}</button>`).join('');
   $('#cat-grid').innerHTML=CATS.map(c=>`<button class="choice ${currentSheet.cat===c.id?'active':''}" type="button" data-sheet-cat="${c.id}" aria-pressed="${currentSheet.cat===c.id}"><span aria-hidden="true">${c.emoji}</span>${esc(c.name)}</button>`).join('');
 }
 async function confirmSheet(){
-  if(!currentSheet)return;const qty=Math.max(.01,parseFloat($('#qty').value)||1),unit=currentSheet.unit,cat=currentSheet.cat;
-  if(currentSheet.id){await commitItemOp({type:'edit',item:{id:currentSheet.id,name:currentSheet.name,qty,unit,cat,qtyStr:`${qty} ${unitLabel(unit)}`}});toast('✅ Producto actualizado')}
-  else{await commitItemOp({type:'add',item:{id:makeId(),name:currentSheet.name,done:false,cat,qty,unit,qtyStr:`${qty} ${unitLabel(unit)}`,addedBy:S.myName,addedAt:now()}});toast(`✅ ${currentSheet.name} añadido`)}
-  closeSheet();
+  if(!currentSheet)return;
+
+  const qty=Math.max(.01,parseFloat($('#qty').value)||1);
+  const unit=currentSheet.unit;
+  const cat=currentSheet.cat;
+  const pendingPhoto=sheetPendingPhoto;
+  const removeExisting=sheetRemoveExistingPhoto;
+
+  // Conservamos referencias antes de cerrar el sheet.
+  const editingItem=currentSheet.id?S.items.find(i=>i.id===currentSheet.id):null;
+  const oldPhotoPath=editingItem?.image?.path||null;
+
+  document.body.classList.add('uploading');
+
+  try{
+    if(currentSheet.id){
+      await commitItemOp({
+        type:'edit',
+        item:{
+          id:currentSheet.id,
+          name:currentSheet.name,
+          qty,unit,cat,
+          qtyStr:`${qty} ${unitLabel(unit)}`
+        }
+      });
+
+      if(removeExisting && oldPhotoPath){
+        await commitItemOp({type:'edit',item:{id:currentSheet.id,image:null}},false);
+        try{await window.SB.deleteImage(oldPhotoPath)}catch(e){console.warn(e)}
+      }
+
+      if(pendingPhoto){
+        toast('Guardando producto y foto…',12000);
+        await uploadPhotoForItem(currentSheet.id,pendingPhoto,oldPhotoPath);
+      }
+
+      hideToast();
+      toast('✅ Producto actualizado');
+    }else{
+      const itemId=makeId();
+      const item={
+        id:itemId,
+        name:currentSheet.name,
+        done:false,
+        cat,qty,unit,
+        qtyStr:`${qty} ${unitLabel(unit)}`,
+        addedBy:S.myName,
+        addedAt:now()
+      };
+
+      await commitItemOp({type:'add',item});
+
+      if(pendingPhoto){
+        toast('Añadiendo producto y foto…',12000);
+        try{
+          await uploadPhotoForItem(itemId,pendingPhoto,null);
+        }catch(photoError){
+          console.error(photoError);
+          hideToast();
+          toast('Producto añadido, pero la foto no se pudo subir.');
+          closeSheet();
+          return;
+        }
+      }
+
+      hideToast();
+      toast(`✅ ${currentSheet.name} añadido`);
+    }
+
+    closeSheet();
+  }catch(e){
+    console.error(e);
+    hideToast();
+    toast('No se pudo guardar el producto.');
+  }finally{
+    document.body.classList.remove('uploading');
+  }
 }
 function requestFinish(){
   const unfinished=S.items.filter(i=>!i.done);$('#unfinished-options').hidden=!unfinished.length;
@@ -888,7 +1140,7 @@ document.addEventListener('click',async e=>{
   }
   else if(b.dataset.photoItem){
     const i=S.items.find(x=>x.id===b.dataset.photoItem);
-    if(i?.image?.url)openPhotoDialog(i.id);else choosePhotoForItem(i.id);
+    if(i?.image?.url)openPhotoDialog(i.id);else choosePhotoForItem(i.id,'gallery');
   }
   else if(b.dataset.editItem){const i=S.items.find(x=>x.id===b.dataset.editItem);if(i)openSheet(i.name,i.id,i.cat)}
   else if(b.dataset.fav!==undefined||b.dataset.suggest!==undefined){const n=b.dataset.fav??b.dataset.suggest;openSheet(n,null,b.dataset.catId)}
@@ -910,19 +1162,47 @@ document.addEventListener('click',async e=>{
   else if(b.dataset.unit){currentSheet.unit=b.dataset.unit;renderSheetChoices()}
   else if(b.dataset.sheetCat){currentSheet.cat=b.dataset.sheetCat;renderSheetChoices()}
   else if(b.dataset.sheetSuggest){currentSheet.name=b.dataset.sheetSuggest;currentSheet.cat=b.dataset.catId;currentSheet.unit=defaultUnit(currentSheet.cat);$('#sheet-title').textContent='Añadir: '+currentSheet.name;renderSheetChoices()}
+  else if(b.id==='sheet-photo-camera'){
+    const input=$('#photo-camera-input');input.value='';input.dataset.target='sheet';input.click();
+  }
+  else if(b.id==='sheet-photo-gallery'){
+    const input=$('#photo-gallery-input');input.value='';input.dataset.target='sheet';input.click();
+  }
+  else if(b.id==='sheet-photo-paste')pasteImageIntoSheet();
+  else if(b.id==='sheet-photo-remove')removePhotoFromSheet();
   else if(b.id==='sheet-cancel')closeSheet();
   else if(b.id==='sheet-confirm')confirmSheet();
   else if(b.id==='finish-btn')requestFinish();
   else if(b.id==='finish-cancel')closeFinish();
   else if(b.id==='finish-confirm')finishPurchase();
   else if(b.id==='photo-close')closePhotoDialog();
-  else if(b.id==='photo-replace'){if(photoDialogItemId){const id=photoDialogItemId;closePhotoDialog();choosePhotoForItem(id)}}
+  else if(b.id==='photo-replace'){if(photoDialogItemId){const id=photoDialogItemId;closePhotoDialog();choosePhotoForItem(id,'gallery')}}
   else if(b.id==='photo-delete'){if(photoDialogItemId)deletePhotoForItem(photoDialogItemId)}
   else if(b.id?.startsWith('tab-'))setTab(b.id.replace('tab-',''));
 });
 $('#ainp').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const n=e.currentTarget.value.trim();if(n){e.currentTarget.value='';openSheet(n)}}});
 $('#fav-search').addEventListener('input',renderFavs);
-$('#photo-input').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)uploadSelectedPhoto(file)});
+document.addEventListener('paste',e=>{
+  if($('#sheet').hidden)return;
+  const file=[...(e.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));
+  if(file){
+    e.preventDefault();
+    setPendingSheetPhoto(file,'imagen-pegada');
+    toast('✅ Imagen pegada');
+  }
+});
+function handlePhotoFileInput(input){
+  const file=input.files?.[0];
+  if(!file)return;
+  if(input.dataset.target==='sheet'){
+    setPendingSheetPhoto(file);
+    input.dataset.target='';
+  }else if(photoTargetItemId){
+    uploadSelectedPhoto(file);
+  }
+}
+$('#photo-camera-input').addEventListener('change',e=>handlePhotoFileInput(e.currentTarget));
+$('#photo-gallery-input').addEventListener('change',e=>handlePhotoFileInput(e.currentTarget));
 $('#toast').addEventListener('click',hideToast);
 setInterval(()=>{
   const t=$('#toast'),until=Number(t?.dataset?.until||0);
@@ -930,7 +1210,10 @@ setInterval(()=>{
 },500);
 window.addEventListener('visibilitychange',()=>{
   const t=$('#toast'),until=Number(t?.dataset?.until||0);
-  if(document.visibilityState==='visible'&&until&&Date.now()>=until)hideToast();
+  if(document.visibilityState==='visible'){
+    if(until&&Date.now()>=until)hideToast();
+    supabaseKeepAlive();
+  }
 });
 window.addEventListener('online',()=>{$('#offline-note').hidden=true;setSync('syncing');flushPending();heartbeat()});
 window.addEventListener('offline',()=>{$('#offline-note').hidden=false;setSync('err')});
@@ -957,6 +1240,7 @@ async function migrateSavedRooms(){
 (async function init(){
   loadLocal();renderSetup();$('#offline-note').hidden=navigator.onLine;
   await waitFB();await waitAuthBrief();
+  supabaseKeepAlive();
   S.myName=$('#sname').value.trim()||localStorage.getItem('lc_name')||'Yo';
   migrateSavedRooms();
   const params=new URLSearchParams(location.search),room=params.get('room')?.toUpperCase();
