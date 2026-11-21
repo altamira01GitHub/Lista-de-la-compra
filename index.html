@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION UI: integrated-photo-flow-and-supabase-keepalive-2026-11-13 -->
+<!-- VERSION UI: supabase-db-keepalive-v2-2026-11-21 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -272,14 +272,13 @@ window.SB={
     if(error)throw error;
   },
   keepAlive:async()=>{
-    // Una consulta mínima al índice de Storage. No descarga imágenes.
-    const {error}=await supabase.storage.from(SUPABASE_BUCKET).list('',{
-      limit:1,
-      offset:0,
-      sortBy:{column:'name',order:'asc'}
-    });
+    // Consulta mínima REAL a Postgres para que cuente como actividad de base de datos.
+    const {data,error}=await supabase
+      .from('keepalive')
+      .select('id')
+      .limit(1);
     if(error)throw error;
-    return true;
+    return Array.isArray(data);
   }
 };
 
@@ -687,7 +686,18 @@ async function uploadSelectedPhoto(file){
     await commitItemOp({type:'edit',item:{id:item.id,image:{url,path,uploadedBy:S.myName,uploadedAt:now(),width:c.width,height:c.height}}},false);
     if(oldPath&&oldPath!==path){try{await window.SB.deleteImage(oldPath)}catch(e){console.warn(e)}}
     hideToast();toast('✅ Foto añadida');
-  }catch(e){console.error(e);hideToast();toast('No se pudo subir la foto.')}
+  }catch(e){
+    console.error('Error al subir imagen a Supabase:',e);
+    hideToast();
+    const msg=String(e?.message||'').toLowerCase();
+    if(msg.includes('fetch')||msg.includes('network')){
+      toast('No se pudo contactar con Supabase. Comprueba si el proyecto está activo.');
+    }else if(msg.includes('row-level security')||msg.includes('policy')||msg.includes('permission')){
+      toast('Supabase ha rechazado la foto por permisos de Storage.');
+    }else{
+      toast('No se pudo subir la foto a Supabase.');
+    }
+  }
   finally{document.body.classList.remove('uploading');photoTargetItemId=null}
 }
 function openPhotoDialog(itemId){
@@ -706,17 +716,17 @@ async function deletePhotoForItem(itemId){
 
 
 async function supabaseKeepAlive(){
-  const key='lc_supabase_keepalive_ts';
+  const key='lc_supabase_keepalive_ts_v2';
   const last=Number(localStorage.getItem(key)||0);
-  const DAY=24*60*60*1000;
-  if(Date.now()-last<DAY)return;
+  const SIX_HOURS=6*60*60*1000;
+  if(Date.now()-last<SIX_HOURS)return;
 
   try{
     await window.SB.keepAlive();
     localStorage.setItem(key,String(Date.now()));
   }catch(e){
-    // No bloquea la app: si Supabase está pausado o inaccesible, Firebase sigue funcionando.
-    console.warn('Keep-alive de Supabase no disponible.',e);
+    // No bloquea la lista: Firebase sigue funcionando aunque Supabase esté pausado.
+    console.warn('Keep-alive de base de datos de Supabase no disponible.',e);
   }
 }
 
@@ -1215,7 +1225,7 @@ window.addEventListener('visibilitychange',()=>{
     supabaseKeepAlive();
   }
 });
-window.addEventListener('online',()=>{$('#offline-note').hidden=true;setSync('syncing');flushPending();heartbeat()});
+window.addEventListener('online',()=>{$('#offline-note').hidden=true;setSync('syncing');flushPending();heartbeat();supabaseKeepAlive()});
 window.addEventListener('offline',()=>{$('#offline-note').hidden=false;setSync('err')});
 setInterval(heartbeat,5*60*1000);
 
